@@ -1,0 +1,1234 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>이투잡의 하루</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=DotGothic16&family=Noto+Sans+KR:wght@400;700&display=swap');
+
+:root {
+  --bg:       #0d0d1a;
+  --panel:    #131325;
+  --panel2:   #1a1a35;
+  --border:   #2a2a55;
+  --accent:   #7c6fff;
+  --yellow:   #ffe066;
+  --green:    #5effb1;
+  --red:      #ff6b6b;
+  --text:     #e8e6ff;
+  --muted:    #6666aa;
+  --px: 3px;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; image-rendering: pixelated; }
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'DotGothic16', monospace;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+
+/* ── 픽셀 테두리 믹스인 ── */
+.px-border {
+  border: var(--px) solid var(--border);
+  box-shadow:
+    inset var(--px) var(--px) 0 rgba(255,255,255,0.06),
+    inset calc(-1*var(--px)) calc(-1*var(--px)) 0 rgba(0,0,0,0.4);
+}
+
+/* ── 전체 게임 창 ── */
+#game {
+  width: 100%;
+  max-width: 560px;
+}
+
+/* ── 상태바 ── */
+#statusbar {
+  background: var(--panel);
+  border: var(--px) solid var(--border);
+  border-bottom: none;
+  padding: 8px 14px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 12px;
+  color: var(--muted);
+}
+#statusbar .name { color: var(--yellow); }
+#statusbar .stats { display: flex; gap: 16px; }
+.stat { display: flex; align-items: center; gap: 5px; }
+.stat-bar {
+  width: 50px; height: 6px;
+  background: var(--panel2);
+  border: 1px solid var(--border);
+  position: relative;
+  overflow: hidden;
+}
+.stat-fill {
+  height: 100%;
+  background: var(--green);
+  transition: width 0.4s ease;
+}
+.stat-fill.red { background: var(--red); }
+.stat-fill.yellow { background: var(--yellow); }
+
+/* ── 씬 영역 ── */
+#scene {
+  background: var(--panel);
+  border: var(--px) solid var(--border);
+  height: 220px;
+  position: relative;
+  overflow: hidden;
+}
+
+/* 스캔라인 오버레이 */
+#scene::after {
+  content: '';
+  position: absolute; inset: 0;
+  background: repeating-linear-gradient(
+    to bottom,
+    transparent 0px,
+    transparent 3px,
+    rgba(0,0,0,0.12) 3px,
+    rgba(0,0,0,0.12) 4px
+  );
+  pointer-events: none;
+  z-index: 10;
+}
+
+/* 작업실 배경 */
+.studio-bg {
+  position: absolute; inset: 0;
+  background:
+    linear-gradient(to bottom, #0d0d2e 0%, #131330 60%, #1a1040 100%);
+}
+
+/* 픽셀 별 */
+.stars {
+  position: absolute; inset: 0;
+  overflow: hidden;
+}
+.star {
+  position: absolute;
+  width: 2px; height: 2px;
+  background: white;
+  animation: twinkle 2s infinite;
+}
+@keyframes twinkle {
+  0%,100% { opacity: 0.3; }
+  50% { opacity: 1; }
+}
+
+/* 책상 */
+.desk {
+  position: absolute;
+  bottom: 40px; left: 50%;
+  transform: translateX(-50%);
+  width: 200px; height: 14px;
+  background: #4a3728;
+  border-top: 3px solid #6b5040;
+  border-left: 3px solid #3a2818;
+  border-right: 3px solid #3a2818;
+}
+/* 모니터 */
+.monitor {
+  position: absolute;
+  bottom: 54px; left: 50%;
+  transform: translateX(-50%);
+  width: 70px;
+}
+.monitor-screen {
+  width: 70px; height: 46px;
+  background: #0a0a1f;
+  border: 3px solid #555;
+  border-bottom: none;
+  position: relative;
+  overflow: hidden;
+}
+.monitor-screen-inner {
+  width: 100%; height: 100%;
+  background: linear-gradient(135deg, #0a0a2e, #1a0a3e);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 9px;
+  color: var(--accent);
+  text-align: center;
+  line-height: 1.4;
+  animation: screenFlicker 4s infinite;
+}
+@keyframes screenFlicker {
+  0%,95%,100% { opacity: 1; }
+  96% { opacity: 0.7; }
+  97% { opacity: 1; }
+  98% { opacity: 0.8; }
+}
+.monitor-stand {
+  width: 20px; height: 6px;
+  background: #555;
+  margin: 0 auto;
+}
+.monitor-base {
+  width: 36px; height: 4px;
+  background: #444;
+  margin: 0 auto;
+}
+
+/* 키보드 */
+.keyboard {
+  position: absolute;
+  bottom: 54px;
+  left: calc(50% + 46px);
+  width: 50px; height: 10px;
+  background: #333;
+  border: 2px solid #555;
+  border-radius: 1px;
+}
+
+/* 주인공 캐릭터 */
+#character {
+  position: absolute;
+  bottom: 54px;
+  left: 50%;
+  transform: translateX(-50%) translateX(-60px);
+  font-size: 36px;
+  line-height: 1;
+  animation: idle 1.8s steps(1) infinite;
+  cursor: default;
+  z-index: 5;
+  filter: drop-shadow(0 0 8px rgba(124,111,255,0.4));
+}
+@keyframes idle {
+  0%,80%   { transform: translateX(-60px) translateX(-50%) translateY(0); }
+  40%      { transform: translateX(-60px) translateX(-50%) translateY(-2px); }
+}
+
+/* 헤드폰 깜빡이 */
+#character.working { animation: working 0.6s steps(1) infinite; }
+@keyframes working {
+  0%   { transform: translateX(-60px) translateX(-50%) translateY(0); }
+  50%  { transform: translateX(-60px) translateX(-50%) translateY(-3px); }
+}
+
+/* 음표들 */
+.note {
+  position: absolute;
+  font-size: 14px;
+  animation: floatNote 2s ease-out forwards;
+  pointer-events: none;
+  z-index: 6;
+}
+@keyframes floatNote {
+  0%   { opacity: 1; transform: translateY(0) rotate(0deg); }
+  100% { opacity: 0; transform: translateY(-60px) rotate(20deg); }
+}
+
+/* 이벤트 텍스트 */
+#event-text {
+  position: absolute;
+  top: 10px; left: 50%;
+  transform: translateX(-50%);
+  background: rgba(0,0,0,0.75);
+  border: 1px solid var(--accent);
+  padding: 4px 12px;
+  font-size: 11px;
+  color: var(--yellow);
+  white-space: nowrap;
+  z-index: 20;
+  display: none;
+}
+#event-text.show { display: block; animation: blink 0.4s steps(1) 3; }
+@keyframes blink { 50% { opacity: 0; } }
+
+/* ── 대화창 ── */
+#dialogbox {
+  background: var(--panel);
+  border: var(--px) solid var(--border);
+  border-top: none;
+  min-height: 72px;
+  padding: 12px 16px;
+  position: relative;
+}
+#dialog-name {
+  font-size: 11px;
+  color: var(--accent);
+  margin-bottom: 4px;
+}
+#dialog-text {
+  font-size: 13px;
+  line-height: 1.7;
+  min-height: 40px;
+  color: var(--text);
+}
+#dialog-cursor {
+  display: inline-block;
+  width: 8px; height: 12px;
+  background: var(--text);
+  margin-left: 2px;
+  animation: blink 0.7s steps(1) infinite;
+  vertical-align: middle;
+}
+
+/* ── 메뉴 영역 ── */
+#menuarea {
+  background: var(--panel2);
+  border: var(--px) solid var(--border);
+  border-top: none;
+  padding: 12px;
+}
+
+#menu-title {
+  font-size: 10px;
+  color: var(--muted);
+  margin-bottom: 10px;
+  letter-spacing: 0.1em;
+}
+
+.menu-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.menu-btn {
+  background: var(--panel);
+  border: var(--px) solid var(--border);
+  color: var(--text);
+  font-family: 'DotGothic16', monospace;
+  font-size: 13px;
+  padding: 10px 14px;
+  text-align: left;
+  cursor: pointer;
+  transition: background 0.1s, border-color 0.1s;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  position: relative;
+  overflow: hidden;
+}
+.menu-btn::before {
+  content: '▶';
+  font-size: 9px;
+  color: var(--muted);
+  flex-shrink: 0;
+}
+.menu-btn:hover, .menu-btn:focus {
+  background: var(--panel2);
+  border-color: var(--accent);
+  color: var(--yellow);
+  outline: none;
+}
+.menu-btn:hover::before, .menu-btn:focus::before {
+  color: var(--accent);
+}
+.menu-btn:active {
+  transform: translateY(1px);
+}
+.menu-btn.selected {
+  border-color: var(--yellow);
+  color: var(--yellow);
+  background: rgba(255,224,102,0.08);
+}
+.menu-btn.selected::before { color: var(--yellow); }
+
+/* 선택지 스타일 (음악 선택 등) */
+.choice-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.choice-btn {
+  background: var(--panel);
+  border: var(--px) solid var(--border);
+  color: var(--text);
+  font-family: 'DotGothic16', monospace;
+  font-size: 13px;
+  padding: 9px 14px;
+  text-align: left;
+  cursor: pointer;
+  transition: all 0.1s;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.choice-btn::before { content: '○'; color: var(--muted); font-size: 10px; }
+.choice-btn:hover {
+  border-color: var(--accent);
+  color: var(--yellow);
+  background: rgba(124,111,255,0.08);
+}
+.choice-btn:hover::before { content: '●'; color: var(--accent); }
+
+/* 결과 카드 */
+.result-card {
+  background: var(--panel);
+  border: var(--px) solid var(--accent);
+  padding: 14px 16px;
+  font-size: 13px;
+  line-height: 1.8;
+}
+.result-card .result-title {
+  color: var(--yellow);
+  margin-bottom: 8px;
+  font-size: 12px;
+}
+.result-card .result-fans {
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid var(--border);
+  color: var(--muted);
+  font-size: 12px;
+}
+.result-card .fan-msg { color: var(--text); margin-top: 4px; }
+.result-card .fan-rare { color: var(--green); }
+
+/* 진행바 */
+.progress-wrap {
+  margin: 8px 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 11px;
+  color: var(--muted);
+}
+.progress-bar {
+  flex: 1;
+  height: 8px;
+  background: var(--panel2);
+  border: 1px solid var(--border);
+  overflow: hidden;
+}
+.progress-fill {
+  height: 100%;
+  background: var(--accent);
+  width: 0%;
+  transition: width 0.05s linear;
+}
+
+/* 스크롤 없애기 */
+#menuarea { max-height: 180px; overflow-y: auto; }
+#menuarea::-webkit-scrollbar { width: 4px; }
+#menuarea::-webkit-scrollbar-track { background: var(--panel2); }
+#menuarea::-webkit-scrollbar-thumb { background: var(--border); }
+
+/* CRT 켜짐 애니메이션 */
+@keyframes crtOn {
+  0%   { transform: scaleY(0.01) scaleX(1); opacity: 0.8; }
+  30%  { transform: scaleY(1) scaleX(1); opacity: 1; }
+  100% { transform: scaleY(1) scaleX(1); opacity: 1; }
+}
+#game { animation: crtOn 0.5s ease-out; }
+
+/* ── 마을 배경 ── */
+.town-bg {
+  position: absolute; inset: 0;
+  background: linear-gradient(to bottom, #0a1a0a 0%, #0d2010 50%, #1a2a10 100%);
+}
+/* 마을 바닥 */
+.town-ground {
+  position: absolute;
+  bottom: 0; left: 0; right: 0;
+  height: 36px;
+  background: #1a3020;
+  border-top: 3px solid #2a4a30;
+}
+/* 픽셀 건물들 */
+.building {
+  position: absolute;
+  bottom: 36px;
+  display: flex; flex-direction: column; align-items: center;
+}
+.building-body {
+  background: #1a2a3a;
+  border: 2px solid #2a4a6a;
+  position: relative;
+}
+.building-body.lit { border-color: #4a7aaa; }
+.building-window {
+  position: absolute;
+  width: 8px; height: 8px;
+  background: #0a0a20;
+  border: 1px solid #333;
+}
+.building-window.on { background: var(--yellow); box-shadow: 0 0 4px var(--yellow); }
+.building-window.purple-on { background: var(--accent); box-shadow: 0 0 4px var(--accent); }
+.building-roof {
+  width: 0; height: 0;
+  border-left: solid transparent;
+  border-right: solid transparent;
+  border-bottom: solid #2a4a6a;
+}
+/* 달 */
+.moon {
+  position: absolute;
+  top: 18px; right: 30px;
+  width: 22px; height: 22px;
+  background: #ffe8a0;
+  border-radius: 50%;
+  box-shadow: 0 0 12px rgba(255,232,160,0.4);
+}
+/* 마을 캐릭터 */
+.town-char {
+  position: absolute;
+  font-size: 28px;
+  bottom: 38px;
+  z-index: 5;
+  filter: drop-shadow(0 0 6px rgba(124,111,255,0.5));
+  animation: idle 1.8s steps(1) infinite;
+}
+/* 건물 표지판 */
+.sign {
+  position: absolute;
+  bottom: 36px;
+  background: var(--panel);
+  border: 2px solid var(--border);
+  padding: 2px 6px;
+  font-size: 9px;
+  color: var(--muted);
+  white-space: nowrap;
+  z-index: 4;
+}
+
+/* ── 알바 배경 ── */
+.alba-bg {
+  position: absolute; inset: 0;
+  background: linear-gradient(to bottom, #1a1000 0%, #251500 60%, #301a00 100%);
+}
+.conveyor {
+  position: absolute;
+  bottom: 36px; left: 0; right: 0;
+  height: 12px;
+  background: repeating-linear-gradient(90deg, #333 0px, #333 20px, #444 20px, #444 40px);
+  border-top: 3px solid #555;
+  border-bottom: 3px solid #222;
+  animation: conveyorMove 1s linear infinite;
+}
+@keyframes conveyorMove {
+  from { background-position: 0 0; }
+  to   { background-position: 40px 0; }
+}
+.warehouse-shelf {
+  position: absolute;
+  left: 20px; right: 20px;
+  height: 10px;
+  background: #4a3010;
+  border-top: 2px solid #6a5030;
+}
+
+/* 편의점 배경 */
+.store-bg {
+  position: absolute; inset: 0;
+  background: linear-gradient(to bottom, #001a2a 0%, #00253a 100%);
+}
+.store-shelf {
+  position: absolute;
+  left: 30px; right: 30px;
+  height: 8px;
+  background: #2a4a6a;
+  border-top: 2px solid #4a7aaa;
+}
+.store-item {
+  position: absolute;
+  font-size: 16px;
+  bottom: 0;
+}
+
+/* 광장 배경 */
+.plaza-bg {
+  position: absolute; inset: 0;
+  background: linear-gradient(to bottom, #0a0a2a 0%, #12102e 100%);
+}
+.fountain {
+  position: absolute;
+  bottom: 36px; left: 50%;
+  transform: translateX(-50%);
+  text-align: center;
+  font-size: 24px;
+}
+.npc-cat {
+  position: absolute;
+  font-size: 24px;
+  bottom: 38px;
+  animation: idle 2s steps(1) infinite;
+}
+
+/* 씬 전환 */
+#scene { transition: none; }
+
+/* 8비트 오디오 비주얼라이저 (장식) */
+#visualizer {
+  position: absolute;
+  bottom: 8px; right: 10px;
+  display: flex; gap: 2px; align-items: flex-end;
+  height: 20px; z-index: 6;
+}
+.viz-bar {
+  width: 3px;
+  background: var(--accent);
+  opacity: 0.5;
+  animation: vizAnim 0.3s ease infinite alternate;
+}
+@keyframes vizAnim {
+  to { height: 4px; }
+}
+</style>
+</head>
+<body>
+
+<div id="game">
+  <!-- 상태바 -->
+  <div id="statusbar">
+    <span class="name">😾 이투잡</span>
+    <div class="stats">
+      <div class="stat">
+        <span>🐟</span>
+        <div class="stat-bar"><div class="stat-fill yellow" id="bar-tuna" style="width:60%"></div></div>
+      </div>
+      <div class="stat">
+        <span>💜</span>
+        <div class="stat-bar"><div class="stat-fill" id="bar-spirit" style="width:80%"></div></div>
+      </div>
+      <div class="stat">
+        <span>🎵</span>
+        <div class="stat-bar"><div class="stat-fill" id="bar-music" style="width:40%"></div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 씬 -->
+  <div id="scene">
+    <div id="event-text"></div>
+    <div id="character">🎧</div>
+    <div id="visualizer">
+      <div class="viz-bar" style="height:12px; animation-delay:0s"></div>
+      <div class="viz-bar" style="height:18px; animation-delay:0.1s"></div>
+      <div class="viz-bar" style="height:8px;  animation-delay:0.2s"></div>
+      <div class="viz-bar" style="height:15px; animation-delay:0.05s"></div>
+      <div class="viz-bar" style="height:20px; animation-delay:0.15s"></div>
+      <div class="viz-bar" style="height:10px; animation-delay:0.25s"></div>
+    </div>
+  </div>
+
+  <!-- 대화창 -->
+  <div id="dialogbox">
+    <div id="dialog-name">이투잡</div>
+    <div id="dialog-text">새벽 2시다. 오늘도 작업실이다.<span id="dialog-cursor"></span></div>
+  </div>
+
+  <!-- 메뉴 -->
+  <div id="menuarea">
+    <div id="menu-title">▷ 어떻게 할까?</div>
+    <div id="menu-content"></div>
+  </div>
+</div>
+
+<script>
+// ── 상태 ──
+const state = {
+  tuna: 60,
+  spirit: 80,
+  music: 40,
+  day: 1,
+  trackName: null,
+  genre: null,
+  mood: null,
+};
+
+// ── UI 유틸 ──
+function setDialog(name, text) {
+  document.getElementById('dialog-name').textContent = name;
+  document.getElementById('dialog-text').innerHTML = typeText(text) + '<span id="dialog-cursor"></span>';
+}
+
+function typeText(text) { return text; }
+
+function showEvent(msg) {
+  const el = document.getElementById('event-text');
+  el.textContent = msg;
+  el.style.display = 'block';
+  el.classList.remove('show');
+  void el.offsetWidth;
+  el.classList.add('show');
+  setTimeout(() => { el.style.display = 'none'; }, 2500);
+}
+
+function spawnNote(emoji) {
+  const scene = document.getElementById('scene');
+  const note = document.createElement('div');
+  note.className = 'note';
+  note.textContent = emoji;
+  note.style.left = (Math.random() * 60 + 80) + 'px';
+  note.style.bottom = '70px';
+  scene.appendChild(note);
+  setTimeout(() => note.remove(), 2000);
+}
+
+function updateBars() {
+  document.getElementById('bar-tuna').style.width = state.tuna + '%';
+  document.getElementById('bar-spirit').style.width = state.spirit + '%';
+  document.getElementById('bar-music').style.width = state.music + '%';
+}
+
+function setWorking(on) {
+  const c = document.getElementById('character');
+  if (on) c.classList.add('working');
+  else c.classList.remove('working');
+}
+
+function setMonitor(text) {
+  const el = document.getElementById('monitor-text');
+  if (el) el.innerHTML = text;
+}
+
+// ── 메뉴 렌더 ──
+function renderMenu(items) {
+  const el = document.getElementById('menu-content');
+  el.innerHTML = '';
+
+  if (items.type === 'grid') {
+    const grid = document.createElement('div');
+    grid.className = 'menu-grid';
+    items.options.forEach(opt => {
+      const btn = document.createElement('button');
+      btn.className = 'menu-btn';
+      btn.textContent = opt.label;
+      btn.onclick = opt.action;
+      grid.appendChild(btn);
+    });
+    el.appendChild(grid);
+  } else if (items.type === 'choice') {
+    const list = document.createElement('div');
+    list.className = 'choice-list';
+    items.options.forEach(opt => {
+      const btn = document.createElement('button');
+      btn.className = 'choice-btn';
+      btn.textContent = opt.label;
+      btn.onclick = opt.action;
+      list.appendChild(btn);
+    });
+    el.appendChild(list);
+  } else if (items.type === 'result') {
+    const card = document.createElement('div');
+    card.className = 'result-card';
+    card.innerHTML = items.html;
+    el.appendChild(card);
+  } else if (items.type === 'progress') {
+    const wrap = document.createElement('div');
+    wrap.innerHTML = `
+      <div style="font-size:13px;margin-bottom:8px;color:var(--text)">${items.label}</div>
+      <div class="progress-wrap">
+        <span>${items.sublabel}</span>
+        <div class="progress-bar"><div class="progress-fill" id="prog-fill"></div></div>
+        <span id="prog-pct">0%</span>
+      </div>
+    `;
+    el.appendChild(wrap);
+    // 진행바 애니메이션
+    let pct = 0;
+    const fill = wrap.querySelector('#prog-fill');
+    const pctEl = wrap.querySelector('#prog-pct');
+    const iv = setInterval(() => {
+      pct += 2;
+      fill.style.width = pct + '%';
+      pctEl.textContent = pct + '%';
+      if (pct >= 100) {
+        clearInterval(iv);
+        setTimeout(items.done, 300);
+      }
+    }, items.speed || 40);
+  }
+}
+
+// ── 씬들 ──
+
+// ── 씬 배경 전환 헬퍼 ──
+function setScene(type) {
+  const scene = document.getElementById('scene');
+  // 기존 배경/소품 제거 (캐릭터, 이벤트텍스트, 비주얼라이저 제외)
+  [...scene.children].forEach(el => {
+    if (!['character','event-text','visualizer'].includes(el.id)) el.remove();
+  });
+
+  const char = document.getElementById('character');
+  const viz  = document.getElementById('visualizer');
+
+  if (type === 'studio') {
+    scene.insertAdjacentHTML('afterbegin', `
+      <div class="studio-bg"></div>
+      <div class="stars" id="stars"></div>
+      <div class="desk"></div>
+      <div class="monitor">
+        <div class="monitor-screen"><div class="monitor-screen-inner" id="monitor-text">PROJECT<br>UNTITLED<br>──────<br>저장안함⚠</div></div>
+        <div class="monitor-stand"></div><div class="monitor-base"></div>
+      </div>
+      <div class="keyboard"></div>
+    `);
+    char.style.display = '';
+    char.style.left = '50%';
+    char.style.transform = 'translateX(-50%) translateX(-60px)';
+    char.textContent = '🎧';
+    viz.style.display = '';
+    // 별 재생성
+    const s = document.getElementById('stars');
+    for (let i=0;i<30;i++){
+      const d=document.createElement('div');d.className='star';
+      d.style.left=Math.random()*100+'%';d.style.top=Math.random()*60+'%';
+      d.style.animationDelay=Math.random()*2+'s';s.appendChild(d);
+    }
+
+  } else if (type === 'town') {
+    scene.insertAdjacentHTML('afterbegin', `
+      <div class="town-bg"></div>
+      <div class="moon"></div>
+      <div class="town-ground"></div>
+      <!-- 작업실 건물 -->
+      <div class="building" style="left:30px">
+        <div class="building-body lit" style="width:60px;height:80px">
+          <div class="building-window purple-on" style="top:12px;left:8px"></div>
+          <div class="building-window purple-on" style="top:12px;right:8px"></div>
+          <div class="building-window on" style="top:34px;left:8px"></div>
+          <div class="building-window" style="top:34px;right:8px"></div>
+          <div class="building-window" style="top:56px;left:8px"></div>
+          <div class="building-window on" style="top:56px;right:8px"></div>
+        </div>
+        <div class="building-roof" style="border-left-width:30px;border-right-width:30px;border-bottom-width:18px"></div>
+      </div>
+      <div class="sign" style="left:22px;bottom:112px;font-size:8px;color:var(--accent)">🎹작업실</div>
+      <!-- 물류센터 -->
+      <div class="building" style="left:140px">
+        <div class="building-body" style="width:80px;height:60px">
+          <div class="building-window on" style="top:10px;left:10px;width:12px;height:12px"></div>
+          <div class="building-window" style="top:10px;right:10px;width:12px;height:12px"></div>
+          <div class="building-window" style="top:34px;left:10px;width:12px;height:8px"></div>
+          <div class="building-window on" style="top:34px;right:10px;width:12px;height:8px"></div>
+        </div>
+      </div>
+      <div class="sign" style="left:138px;bottom:92px;font-size:8px">📦물류센터</div>
+      <!-- 편의점 -->
+      <div class="building" style="right:130px">
+        <div class="building-body lit" style="width:55px;height:55px">
+          <div class="building-window on" style="top:10px;left:6px;width:10px;height:10px"></div>
+          <div class="building-window on" style="top:10px;right:6px;width:10px;height:10px"></div>
+          <div class="building-window on" style="top:32px;left:6px;width:38px;height:10px"></div>
+        </div>
+      </div>
+      <div class="sign" style="right:122px;bottom:87px;font-size:8px">🏪편의점</div>
+      <!-- 광장 -->
+      <div class="building" style="right:20px">
+        <div class="building-body" style="width:50px;height:45px">
+          <div class="building-window" style="top:8px;left:6px;width:8px;height:8px"></div>
+          <div class="building-window on" style="top:8px;right:6px;width:8px;height:8px"></div>
+          <div class="building-window on" style="top:26px;left:6px;width:8px;height:8px"></div>
+          <div class="building-window" style="top:26px;right:6px;width:8px;height:8px"></div>
+        </div>
+        <div class="building-roof" style="border-left-width:25px;border-right-width:25px;border-bottom-width:14px"></div>
+      </div>
+      <div class="sign" style="right:12px;bottom:75px;font-size:8px">☕광장</div>
+    `);
+    char.style.display = '';
+    char.style.left = '50%';
+    char.style.transform = 'translateX(-50%)';
+    char.textContent = '🎧';
+    viz.style.display = 'none';
+
+  } else if (type === 'alba') {
+    scene.insertAdjacentHTML('afterbegin', `
+      <div class="alba-bg"></div>
+      <div class="warehouse-shelf" style="top:60px"></div>
+      <div class="warehouse-shelf" style="top:100px"></div>
+      <div class="warehouse-shelf" style="top:140px"></div>
+      <div style="position:absolute;top:48px;left:20px;font-size:13px;color:var(--muted)">📦 📦 🐟 📦</div>
+      <div style="position:absolute;top:88px;left:20px;font-size:13px;color:var(--muted)">🐟 📦 📦 🐟</div>
+      <div style="position:absolute;top:128px;left:20px;font-size:13px;color:var(--muted)">📦 🐟 📦 📦</div>
+      <div class="conveyor"></div>
+      <div style="position:absolute;bottom:50px;left:10px;font-size:18px;animation:conveyorMove 1s linear infinite">📦 🐟 📦 🐟 📦</div>
+    `);
+    char.style.display = '';
+    char.style.left = '60%';
+    char.style.transform = 'translateX(-50%)';
+    char.textContent = '😾';
+    viz.style.display = 'none';
+
+  } else if (type === 'store') {
+    scene.insertAdjacentHTML('afterbegin', `
+      <div class="store-bg"></div>
+      <div class="store-shelf" style="top:50px"></div>
+      <div class="store-shelf" style="top:100px"></div>
+      <div class="store-shelf" style="top:150px"></div>
+      <div style="position:absolute;top:30px;left:30px;font-size:18px">🐟 🐟 🐟 🥫 🥫</div>
+      <div style="position:absolute;top:80px;left:30px;font-size:18px">🧃 ☕ 🥛 🧃 ☕</div>
+      <div style="position:absolute;top:130px;left:30px;font-size:18px">🍜 🍜 🍜 🥡 🍜</div>
+      <div style="position:absolute;top:8px;left:50%;transform:translateX(-50%);font-size:10px;color:var(--yellow);letter-spacing:2px">OPEN 24H</div>
+    `);
+    char.style.display = '';
+    char.style.left = '40%';
+    char.style.transform = 'translateX(-50%)';
+    char.textContent = '🎧';
+    viz.style.display = 'none';
+
+  } else if (type === 'plaza') {
+    scene.insertAdjacentHTML('afterbegin', `
+      <div class="plaza-bg"></div>
+      <div class="stars" id="stars2"></div>
+      <div class="town-ground" style="background:#1a1a35;border-color:#2a2a55"></div>
+      <div class="fountain">⛲</div>
+      <div class="npc-cat" style="left:60px">😼</div>
+      <div class="npc-cat" style="left:160px;animation-delay:0.5s">😺</div>
+      <div class="npc-cat" style="right:60px;animation-delay:0.9s">😹</div>
+    `);
+    char.style.display = '';
+    char.style.left = '50%';
+    char.style.transform = 'translateX(-50%)';
+    char.textContent = '🎧';
+    viz.style.display = 'none';
+    const s2=document.getElementById('stars2');
+    for(let i=0;i<20;i++){const d=document.createElement('div');d.className='star';d.style.left=Math.random()*100+'%';d.style.top=Math.random()*50+'%';d.style.animationDelay=Math.random()*2+'s';s2.appendChild(d);}
+  }
+}
+
+function sceneMain() {
+  setScene('studio');
+  setDialog('이투잡', `새벽 2시. DAW는 켜져 있고 커피는 식었다.\n오늘 뭐 할까?`);
+  setWorking(false);
+  renderMenu({
+    type: 'grid',
+    options: [
+      { label: '🎹 곡 작업하기',     action: sceneStartTrack },
+      { label: '💾 저장하기',         action: sceneSave },
+      { label: '😺 동료 고양이 연락', action: sceneNPC },
+      { label: '🏘️ 마을 나가기',     action: sceneTown },
+    ]
+  });
+}
+
+// ── 마을 ──
+function sceneTown() {
+  setScene('town');
+  setDialog('이투잡', `마을에 나왔다.\n새벽이라 조용하다.`);
+  renderMenu({
+    type: 'grid',
+    options: [
+      { label: '📦 물류센터 (알바)',   action: sceneAlbaFull },
+      { label: '🏪 편의점 (참치 구매)', action: sceneStore    },
+      { label: '☕ 고양이 광장 (수다)', action: scenePlaza    },
+      { label: '🎹 작업실로 돌아가기', action: sceneMain     },
+    ]
+  });
+}
+
+// ── 물류센터 ──
+function sceneAlbaFull() {
+  setScene('alba');
+  setDialog('이투잡', `오전 9시. 물류센터.\n오늘도 분류 시작이다.`);
+  renderMenu({
+    type: 'choice',
+    options: [
+      { label: '📦 박스 분류 시작',    action: sceneAlbaWork },
+      { label: '🐟 참치 라인 확인',    action: () => { setDialog('이투잡', '참치 박스가 제일 많다.\n직업병인지 자꾸 세게 된다.'); setTimeout(sceneAlbaWork, 1800); } },
+      { label: '🙃 잠깐 멍 때리기',    action: () => { state.spirit += 5; updateBars(); showEvent('💜 정신력 +5'); setDialog('이투잡', '잠깐 멈췄다.\n컨베이어 소리가 음악처럼 들린다.'); setTimeout(sceneAlbaWork, 2000); } },
+    ]
+  });
+}
+
+function sceneAlbaWork() {
+  setDialog('이투잡', `상자 분류 중…`);
+  renderMenu({
+    type: 'progress',
+    label: '📦 상자 분류 중…',
+    sublabel: '진행도',
+    speed: 25,
+    done: () => {
+      state.tuna = Math.min(100, state.tuna + 25);
+      updateBars();
+      showEvent('🐟 참치 +25 (알바비)');
+      setDialog('이투잡', `퇴근.\n손목이 아프지만 참치는 늘었다.`);
+      renderMenu({
+        type: 'choice',
+        options: [
+          { label: '🏪 편의점 들렀다 가기', action: sceneStore },
+          { label: '🎹 바로 작업실로',       action: sceneMain },
+          { label: '🏘️ 마을 구경하기',      action: sceneTown },
+        ]
+      });
+    }
+  });
+}
+
+// ── 편의점 ──
+function sceneStore() {
+  setScene('store');
+  setDialog('이투잡', `편의점.\n참치 캔이 쭉 늘어서 있다.`);
+  renderMenu({
+    type: 'choice',
+    options: [
+      { label: `🐟 참치캔 구매 (🐟-20)`,   action: () => {
+        if (state.tuna < 20) { setDialog('이투잡', '참치가 부족하다.\n일단 알바부터.'); return; }
+        state.tuna -= 20; state.spirit = Math.min(100, state.spirit + 25);
+        updateBars(); showEvent('😸 참치 먹음! 💜 +25');
+        setDialog('이투잡', '참치 맛있다.\n이맛에 알바하지.');
+        setTimeout(sceneTown, 2000);
+      }},
+      { label: '☕ 커피 (정신력 회복)',       action: () => {
+        state.spirit = Math.min(100, state.spirit + 10); updateBars();
+        showEvent('☕ 커피 원샷. 💜 +10');
+        setDialog('이투잡', '믹스커피 390원.\n이게 또 맛있다.');
+        setTimeout(sceneTown, 1800);
+      }},
+      { label: '🔙 그냥 나가기',              action: sceneTown },
+    ]
+  });
+}
+
+// ── 고양이 광장 ──
+function scenePlaza() {
+  setScene('plaza');
+  setDialog('이투잡', `광장.\n동료 고양이들이 모여 있다.`);
+  renderMenu({
+    type: 'choice',
+    options: [
+      { label: '😼 홈마 고양이랑 수다',   action: sceneHomma },
+      { label: '😺 디자이너 고양이랑 수다', action: sceneDesigner },
+      { label: '😹 개발자 고양이 만남',    action: sceneDev },
+      { label: '🔙 마을로 돌아가기',       action: sceneTown },
+    ]
+  });
+}
+
+function sceneStartTrack() {
+  setScene('studio');
+  setDialog('이투잡', `오늘 곡 어떤 방향으로 갈까.\n멜로디부터 잡아보자.`);
+  renderMenu({
+    type: 'choice',
+    options: [
+      { label: '🎹 감성 발라드  — 새벽 감성',      action: () => chooseMood('ballad') },
+      { label: '🎸 락  — 오늘따라 폭발하고 싶다',   action: () => chooseMood('rock')   },
+      { label: '🦖 공룡메탈  — 이유 없음',           action: () => chooseMood('dino')   },
+      { label: '🌊 시티팝  — 참치 먹으며 드라이브',  action: () => chooseMood('city')   },
+    ]
+  });
+}
+
+function chooseMood(genre) {
+  state.genre = genre;
+  const labels = {
+    ballad: ['감성 발라드', '🎹', '새벽 감성 넘침'],
+    rock:   ['락',         '🎸', '어딘가 폭발적'],
+    dino:   ['공룡메탈',   '🦖', '왜인지 모르겠지만 확신이 생김'],
+    city:   ['시티팝',     '🌊', '참치향이 나는 것 같기도'],
+  };
+  const [name, emoji, desc] = labels[genre];
+  state.mood = name;
+
+  setDialog('이투잡', `${emoji} ${name}… ${desc}.\n다음은 샘플 고르기.`);
+
+  renderMenu({
+    type: 'choice',
+    options: [
+      { label: '🥁 드럼 — 기본 808',         action: () => chooseSample('808') },
+      { label: '🎷 브라스 샘플 — Splice산',   action: () => chooseSample('brass') },
+      { label: '🎻 스트링 — 직접 연주',       action: () => chooseSample('string') },
+    ]
+  });
+}
+
+function chooseSample(sample) {
+  // 랜덤 이벤트 확률
+  const events = [null, null, null, 'noise', 'missing', 'unsaved'];
+  const ev = events[Math.floor(Math.random() * events.length)];
+
+  if (ev === 'noise') {
+    sceneNoise(sample);
+  } else if (ev === 'missing') {
+    sceneMissingSample(sample);
+  } else if (ev === 'unsaved') {
+    sceneUnsaved(sample);
+  } else {
+    sceneCompose(sample);
+  }
+}
+
+function sceneNoise(sample) {
+  showEvent('⚠ 원인 모를 노이즈 발생!');
+  setWorking(false);
+  setDialog('이투잡', `갑자기 "끼이이익—"\n노이즈가 터졌다. 어디서 나는 거지?`);
+  setMonitor('ERROR<br>NOISE<br>??????<br>???');
+  renderMenu({
+    type: 'choice',
+    options: [
+      { label: '🔌 케이블 다 뽑았다 다시 꽂기', action: () => { showEvent('✓ 해결됨! (이유는 모름)'); sceneCompose(sample); } },
+      { label: '🔄 DAW 재시작',                  action: () => { showEvent('✓ 재시작 후 사라짐'); sceneCompose(sample); } },
+      { label: '🙃 그냥 무시하고 작업',           action: () => { state.spirit -= 10; updateBars(); showEvent('정신력 -10'); sceneCompose(sample); } },
+    ]
+  });
+}
+
+function sceneMissingSample(sample) {
+  showEvent('📁 샘플 폴더가 없어졌다?!');
+  setDialog('이투잡', `분명히 Splice에서 받았는데.\n폴더가 통째로 없다. 아니 이게 왜…`);
+  renderMenu({
+    type: 'choice',
+    options: [
+      { label: '🔍 30분 뒤 발견 (Downloads 폴더)',  action: () => { showEvent('Downloads에 있었음 ㅋㅋ'); state.spirit -= 5; updateBars(); sceneCompose(sample); } },
+      { label: '🌐 Splice 다시 다운로드',            action: () => { showEvent('재다운로드 완료. 참치 1개 소비'); state.tuna -= 10; updateBars(); sceneCompose(sample); } },
+    ]
+  });
+}
+
+function sceneUnsaved(sample) {
+  showEvent('⚠ 저장 안 함 경고!!!');
+  setDialog('이투잡', `잠깐. 마지막으로 저장한 게 언제지.\n…….\n식은땀이 난다.`);
+  setMonitor('⚠ UNSAVED<br>2h 34m<br>────<br>저장하세요');
+  renderMenu({
+    type: 'choice',
+    options: [
+      { label: '💾 지금 당장 Cmd+S 연타',        action: () => { showEvent('💾 저장 완료. 안도감 MAX'); state.spirit += 10; updateBars(); sceneCompose(sample); } },
+      { label: '🙃 괜찮겠지 (그냥 계속 작업)',   action: () => { showEvent('...(불안함이 남아있다)'); sceneCompose(sample); } },
+    ]
+  });
+}
+
+function sceneCompose(sample) {
+  setWorking(true);
+  setMonitor('WORKING<br>████░░░░<br>────<br>…');
+  setDialog('이투잡', `좋아. 작업 시작한다.`);
+
+  const noteEmojis = ['🎵','🎶','♪','♫','🎼'];
+  let noteTimer = setInterval(() => {
+    spawnNote(noteEmojis[Math.floor(Math.random()*noteEmojis.length)]);
+  }, 400);
+
+  renderMenu({
+    type: 'progress',
+    label: `🎹 ${state.mood || '곡'} 작업 중…`,
+    sublabel: '렌더링',
+    speed: 30,
+    done: () => {
+      clearInterval(noteTimer);
+      setWorking(false);
+      state.music = Math.min(100, state.music + 20);
+      state.spirit = Math.max(10, state.spirit - 5);
+      updateBars();
+      setMonitor('DONE<br>✓ 저장됨<br>────<br>v0.3');
+      sceneRelease();
+    }
+  });
+}
+
+function sceneRelease() {
+  setDialog('이투잡', `됐다. 오늘치 데모 완성.\n올려볼까?`);
+  renderMenu({
+    type: 'choice',
+    options: [
+      { label: '📤 지금 바로 공개',      action: sceneFanReaction },
+      { label: '🌙 내일 올리자',          action: () => { setDialog('이투잡', '내일이 되면 또 고치고 싶을 게 분명하지만.\n일단 자자.'); setTimeout(sceneMain, 2000); } },
+    ]
+  });
+}
+
+function sceneFanReaction() {
+  const rareChance = Math.random() < 0.15;
+  const common = [
+    ['😺', '좋네요.'],
+    ['😺', '잘 들었습니다.'],
+    ['😺', '수고하셨어요.'],
+    ['😺', '오 신보네요'],
+    ['😺', '감사합니다'],
+  ];
+  const pick = common[Math.floor(Math.random() * common.length)];
+
+  showEvent('📤 곡 공개됨!');
+  setDialog('이투잡', '올렸다. 반응 좀 볼까.');
+
+  let html = `<div class="result-title">📀 ${state.mood || '새 트랙'} — 팬 반응</div>`;
+
+  if (rareChance) {
+    state.spirit = Math.min(100, state.spirit + 30);
+    updateBars();
+    html += `
+      <div class="fan-msg fan-rare">💌 "이 노래 덕분에 오늘 하루 버텼어요."</div>
+      <div class="fan-msg fan-rare">💌 "계속 만들어주세요."</div>
+      <div class="result-fans">정신력 +30 ✦ 오늘 살았다</div>
+    `;
+    setDialog('이투잡', '…이런 댓글 하나면\n다음 곡 만들게 된다.');
+    spawnNote('💌'); spawnNote('💜'); spawnNote('✨');
+  } else {
+    html += `
+      <div class="fan-msg">${pick[0]} "${pick[1]}"</div>
+      <div class="fan-msg">😺 "잘 듣겠습니다"</div>
+      <div class="fan-msg">😺 "오 올라왔네요"</div>
+      <div class="result-fans">그래도 들어줬다. 그걸로 됐어.</div>
+    `;
+    setDialog('이투잡', '"좋네요" 세 개.\n…그래. 이게 현실이지.');
+  }
+
+  html += `<div style="margin-top:10px; padding-top:10px; border-top:1px solid var(--border); font-size:11px; color:var(--muted)">
+    <button onclick="sceneMain()" style="background:var(--accent);border:none;color:white;font-family:'DotGothic16',monospace;font-size:12px;padding:8px 16px;cursor:pointer;width:100%">▶ 다음날로</button>
+  </div>`;
+
+  renderMenu({ type: 'result', html });
+}
+
+function sceneSave() {
+  showEvent('💾 저장 완료');
+  setDialog('이투잡', '저장했다.\n이제 조금 안심이 된다.');
+  const mon = document.getElementById('monitor-text');
+  if (mon) mon.innerHTML = 'SAVED<br>✓ OK<br>────<br>v0.3';
+  setTimeout(sceneMain, 1500);
+}
+
+function sceneNPC() {
+  scenePlaza();
+}
+
+function sceneHomma() {
+  setDialog('😼 홈마 고양이', '렌더링 7시간째야.\n진행률 34%.');
+  setTimeout(() => {
+    setDialog('😼 홈마 고양이', '이게 맞냐고.');
+    renderMenu({
+      type: 'choice',
+      options: [
+        { label: '🙏 "고생한다…"',                    action: () => { setDialog('이투잡', '위로의 말 밖에 없다.'); setTimeout(scenePlaza, 1500); } },
+        { label: '💡 프록시 파일 써보라고 추천',       action: () => { setDialog('😼 홈마 고양이', '아 그거 몰랐어. 해볼게'); state.spirit += 5; updateBars(); setTimeout(scenePlaza, 1800); } },
+      ]
+    });
+  }, 1500);
+}
+
+function sceneDesigner() {
+  setDialog('😺 디자이너 고양이', '폰트 찾으러 들어갔다가\n3시간 지났어.');
+  setTimeout(() => {
+    renderMenu({
+      type: 'choice',
+      options: [
+        { label: '🔤 내가 쓰는 거 공유해줌',     action: () => { setDialog('이투잡', 'Pretendard 링크 보냈다. 아마 맘에 들 거야.'); state.music += 5; updateBars(); setTimeout(scenePlaza, 1800); } },
+        { label: '😅 "그거 원래 그래"',           action: () => { setDialog('😺 디자이너', '…그렇구나'); setTimeout(scenePlaza, 1500); } },
+      ]
+    });
+  }, 1500);
+}
+
+function sceneDev() {
+  setDialog('😹 개발자 고양이', '내 컴퓨터에서는 되는데?');
+  setTimeout(() => {
+    setDialog('이투잡', '….');
+    setTimeout(() => {
+      setDialog('이투잡', '이 말 들을 때마다\n뭔가 허탈하다.');
+      setTimeout(scenePlaza, 2000);
+    }, 1200);
+  }, 1200);
+}
+
+function sceneAlba() {
+  sceneAlbaFull();
+}
+
+// ── 시작 ──
+sceneMain();
+</script>
+</body>
+</html>
