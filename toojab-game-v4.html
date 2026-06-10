@@ -1,0 +1,1098 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>이투잡의 하루</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=DotGothic16&family=Noto+Sans+KR:wght@400;700&display=swap');
+:root {
+  --bg:#0d0d1a; --panel:#131325; --panel2:#1a1a35; --border:#2a2a55;
+  --accent:#7c6fff; --yellow:#ffe066; --green:#5effb1; --red:#ff6b6b;
+  --text:#e8e6ff; --muted:#6666aa; --px:3px;
+}
+*{box-sizing:border-box;margin:0;padding:0;image-rendering:pixelated}
+body{background:var(--bg);color:var(--text);font-family:'DotGothic16',monospace;min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:16px}
+#game{width:100%;max-width:560px}
+@keyframes crtOn{0%{transform:scaleY(0.01);opacity:.8}30%,100%{transform:scaleY(1);opacity:1}}
+#game{animation:crtOn .5s ease-out}
+
+/* 상태바 */
+#statusbar{background:var(--panel);border:var(--px) solid var(--border);border-bottom:none;padding:7px 12px;display:flex;justify-content:space-between;align-items:center;font-size:11px;color:var(--muted);gap:6px;flex-wrap:wrap}
+.sbar-left{display:flex;align-items:center;gap:8px}
+.char-name{color:var(--yellow);font-size:12px}
+.level-badge{background:var(--accent);color:white;font-size:9px;padding:1px 6px;border-radius:2px;letter-spacing:.05em}
+.sbar-right{display:flex;align-items:center;gap:10px}
+.stat{display:flex;align-items:center;gap:4px;font-size:10px}
+.stat-bar{width:38px;height:5px;background:var(--panel2);border:1px solid var(--border);overflow:hidden}
+.stat-fill{height:100%;background:var(--green);transition:width .4s ease}
+.stat-fill.yellow{background:var(--yellow)}
+.stat-fill.red{background:var(--red)}
+#bgm-btn{background:none;border:1px solid var(--border);color:var(--muted);font-family:'DotGothic16',monospace;font-size:9px;padding:2px 6px;cursor:pointer;border-radius:2px;transition:all .1s}
+
+/* 씬 */
+#scene{background:var(--panel);border:var(--px) solid var(--border);height:200px;position:relative;overflow:hidden}
+#scene::after{content:'';position:absolute;inset:0;background:repeating-linear-gradient(to bottom,transparent 0px,transparent 3px,rgba(0,0,0,.1) 3px,rgba(0,0,0,.1) 4px);pointer-events:none;z-index:10}
+#character{position:absolute;bottom:48px;left:50%;transform:translateX(-50%) translateX(-60px);font-size:34px;line-height:1;animation:idle 1.8s steps(1) infinite;z-index:5;filter:drop-shadow(0 0 8px rgba(124,111,255,.4))}
+@keyframes idle{0%,80%{transform:translateX(-60px) translateX(-50%) translateY(0)}40%{transform:translateX(-60px) translateX(-50%) translateY(-2px)}}
+#character.working{animation:work .6s steps(1) infinite}
+@keyframes work{0%{transform:translateX(-60px) translateX(-50%) translateY(0)}50%{transform:translateX(-60px) translateX(-50%) translateY(-3px)}}
+#event-text{position:absolute;top:8px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,.8);border:1px solid var(--accent);padding:3px 10px;font-size:10px;color:var(--yellow);white-space:nowrap;z-index:20;display:none}
+#event-text.show{display:block}
+#time-badge{position:absolute;top:8px;right:10px;font-size:9px;color:var(--muted);background:rgba(0,0,0,.5);padding:2px 6px;border:1px solid var(--border);z-index:15}
+#visualizer{position:absolute;bottom:6px;right:8px;display:flex;gap:2px;align-items:flex-end;height:18px;z-index:6}
+.viz-bar{width:3px;background:var(--accent);opacity:.5;animation:vizA .3s ease infinite alternate}
+@keyframes vizA{to{height:3px}}
+
+/* 배경 세트 */
+.studio-bg{position:absolute;inset:0;background:linear-gradient(to bottom,#0d0d2e 0%,#131330 60%,#1a1040 100%)}
+.studio-bg.day{background:linear-gradient(to bottom,#1a1a3e 0%,#12122a 100%)}
+.town-bg{position:absolute;inset:0;background:linear-gradient(to bottom,#0a1a0a 0%,#0d2010 50%,#1a2a10 100%)}
+.town-bg.day{background:linear-gradient(to bottom,#1a2a0a 0%,#203010 100%)}
+.alba-bg{position:absolute;inset:0;background:linear-gradient(to bottom,#1a1000 0%,#251500 100%)}
+.store-bg{position:absolute;inset:0;background:linear-gradient(to bottom,#001a2a 0%,#00253a 100%)}
+.plaza-bg{position:absolute;inset:0;background:linear-gradient(to bottom,#0a0a2a 0%,#12102e 100%)}
+.stars{position:absolute;inset:0;overflow:hidden}
+.star{position:absolute;width:2px;height:2px;background:white;animation:twinkle 2s infinite}
+@keyframes twinkle{0%,100%{opacity:.3}50%{opacity:1}}
+.moon{position:absolute;top:16px;right:28px;width:20px;height:20px;background:#ffe8a0;border-radius:50%;box-shadow:0 0 10px rgba(255,232,160,.4)}
+.sun{position:absolute;top:16px;right:28px;width:20px;height:20px;background:#ffcc44;border-radius:50%;box-shadow:0 0 16px rgba(255,200,60,.6)}
+.town-ground{position:absolute;bottom:0;left:0;right:0;height:34px;background:#1a3020;border-top:3px solid #2a4a30}
+.town-ground.day{background:#2a4020;border-color:#3a5030}
+.desk{position:absolute;bottom:38px;left:50%;transform:translateX(-50%);width:190px;height:13px;background:#4a3728;border-top:3px solid #6b5040}
+.monitor{position:absolute;bottom:51px;left:50%;transform:translateX(-50%);width:68px}
+.monitor-screen{width:68px;height:44px;background:#0a0a1f;border:3px solid #555;border-bottom:none;overflow:hidden}
+.monitor-inner{width:100%;height:100%;background:linear-gradient(135deg,#0a0a2e,#1a0a3e);display:flex;align-items:center;justify-content:center;font-size:8px;color:var(--accent);text-align:center;line-height:1.4;animation:flicker 4s infinite}
+@keyframes flicker{0%,95%,100%{opacity:1}96%{opacity:.7}97%{opacity:1}98%{opacity:.8}}
+.monitor-stand{width:18px;height:5px;background:#555;margin:0 auto}
+.monitor-base{width:34px;height:4px;background:#444;margin:0 auto}
+.keyboard{position:absolute;bottom:51px;left:calc(50% + 44px);width:48px;height:9px;background:#333;border:2px solid #555}
+.building{position:absolute;bottom:34px;display:flex;flex-direction:column;align-items:center}
+.building-body{background:#1a2a3a;border:2px solid #2a4a6a;position:relative}
+.building-body.lit{border-color:#4a7aaa}
+.bwin{position:absolute;width:7px;height:7px;background:#0a0a20;border:1px solid #333}
+.bwin.on{background:var(--yellow);box-shadow:0 0 4px var(--yellow)}
+.bwin.pon{background:var(--accent);box-shadow:0 0 4px var(--accent)}
+.building-roof{width:0;height:0;border-left:solid transparent;border-right:solid transparent;border-bottom:solid #2a4a6a}
+.sign{position:absolute;background:var(--panel);border:2px solid var(--border);padding:2px 5px;font-size:8px;color:var(--muted);white-space:nowrap;z-index:4}
+.note{position:absolute;font-size:13px;animation:floatNote 2s ease-out forwards;pointer-events:none;z-index:6}
+@keyframes floatNote{0%{opacity:1;transform:translateY(0)}100%{opacity:0;transform:translateY(-55px) rotate(20deg)}}
+.conveyor{position:absolute;bottom:34px;left:0;right:0;height:11px;background:repeating-linear-gradient(90deg,#333 0px,#333 20px,#444 20px,#444 40px);border-top:3px solid #555;animation:convMove 1s linear infinite}
+@keyframes convMove{to{background-position:40px 0}}
+.w-shelf{position:absolute;left:20px;right:20px;height:9px;background:#4a3010;border-top:2px solid #6a5030}
+.store-shelf{position:absolute;left:28px;right:28px;height:7px;background:#2a4a6a;border-top:2px solid #4a7aaa}
+.fountain{position:absolute;bottom:34px;left:50%;transform:translateX(-50%);font-size:22px;z-index:3}
+.npc{position:absolute;font-size:22px;bottom:36px;animation:idle 2s steps(1) infinite;z-index:4}
+
+/* 대화창 */
+#dialogbox{background:var(--panel);border:var(--px) solid var(--border);border-top:none;min-height:68px;padding:10px 14px;position:relative}
+#dialog-name{font-size:10px;color:var(--accent);margin-bottom:3px}
+#dialog-text{font-size:12px;line-height:1.7;min-height:38px;color:var(--text)}
+#dialog-cursor{display:inline-block;width:7px;height:11px;background:var(--text);margin-left:2px;animation:blink .7s steps(1) infinite;vertical-align:middle}
+@keyframes blink{50%{opacity:0}}
+
+/* 메뉴 */
+#menuarea{background:var(--panel2);border:var(--px) solid var(--border);border-top:none;padding:10px;max-height:200px;overflow-y:auto}
+#menuarea::-webkit-scrollbar{width:3px}
+#menuarea::-webkit-scrollbar-thumb{background:var(--border)}
+#menu-title{font-size:9px;color:var(--muted);margin-bottom:8px;letter-spacing:.1em}
+.menu-grid{display:grid;grid-template-columns:1fr 1fr;gap:7px}
+.menu-btn{background:var(--panel);border:var(--px) solid var(--border);color:var(--text);font-family:'DotGothic16',monospace;font-size:12px;padding:9px 12px;text-align:left;cursor:pointer;transition:background .1s,border-color .1s;display:flex;align-items:center;gap:6px}
+.menu-btn::before{content:'▶';font-size:8px;color:var(--muted);flex-shrink:0}
+.menu-btn:hover,.menu-btn:focus{background:var(--panel2);border-color:var(--accent);color:var(--yellow);outline:none}
+.menu-btn:hover::before{color:var(--accent)}
+.choice-list{display:flex;flex-direction:column;gap:5px}
+.choice-btn{background:var(--panel);border:var(--px) solid var(--border);color:var(--text);font-family:'DotGothic16',monospace;font-size:12px;padding:8px 12px;text-align:left;cursor:pointer;transition:all .1s;display:flex;align-items:center;gap:8px}
+.choice-btn::before{content:'○';color:var(--muted);font-size:9px}
+.choice-btn:hover{border-color:var(--accent);color:var(--yellow);background:rgba(124,111,255,.08)}
+.choice-btn:hover::before{content:'●';color:var(--accent)}
+.result-card{background:var(--panel);border:var(--px) solid var(--accent);padding:12px 14px;font-size:12px;line-height:1.8}
+.result-title{color:var(--yellow);margin-bottom:7px;font-size:11px}
+.result-fans{margin-top:8px;padding-top:8px;border-top:1px solid var(--border);color:var(--muted);font-size:11px}
+.fan-msg{color:var(--text);margin-top:3px}
+.fan-rare{color:var(--green)}
+.progress-wrap{display:flex;align-items:center;gap:7px;font-size:10px;color:var(--muted);margin:6px 0}
+.progress-bar{flex:1;height:7px;background:var(--panel2);border:1px solid var(--border);overflow:hidden}
+.progress-fill{height:100%;background:var(--accent);width:0%;transition:width .05s}
+
+/* 하단 크레딧 */
+#footer{text-align:center;margin-top:8px;font-size:9px;color:var(--muted);letter-spacing:.12em;opacity:.6}
+#footer span{color:var(--accent);opacity:.8}
+
+/* 명예의 전당 / 디스코그래피 패널 */
+.disco-list{display:flex;flex-direction:column;gap:5px;max-height:140px;overflow-y:auto}
+.disco-item{background:var(--panel);border:1px solid var(--border);padding:7px 10px;font-size:11px;display:flex;justify-content:space-between;align-items:center;gap:8px}
+.disco-item .d-title{color:var(--text)}
+.disco-item .d-meta{color:var(--muted);font-size:10px;text-align:right;flex-shrink:0}
+.disco-item .d-rare{color:var(--green)}
+.hall-card{background:var(--panel);border:2px solid var(--yellow);padding:18px;text-align:center;line-height:2}
+.hall-card .hall-emoji{font-size:36px;display:block;margin-bottom:8px}
+.hall-card .hall-title{color:var(--yellow);font-size:13px;margin-bottom:4px}
+.hall-card .hall-stats{font-size:11px;color:var(--muted)}
+.hall-card .hall-stat-row{display:flex;justify-content:space-between;padding:3px 0;border-bottom:1px solid var(--border);font-size:11px}
+.hall-card .hall-stat-row span:last-child{color:var(--text)}
+
+/* 레벨업 팝업 */
+#levelup-popup{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:var(--panel);border:3px solid var(--yellow);padding:24px 32px;text-align:center;z-index:999;display:none;animation:popIn .3s ease}
+@keyframes popIn{0%{transform:translate(-50%,-50%) scale(.5)}100%{transform:translate(-50%,-50%) scale(1)}}
+#levelup-popup .lv-emoji{font-size:40px;display:block;margin-bottom:8px}
+#levelup-popup .lv-title{color:var(--yellow);font-size:14px;margin-bottom:4px}
+#levelup-popup .lv-sub{color:var(--muted);font-size:11px;margin-bottom:14px}
+#levelup-popup button{background:var(--accent);border:none;color:white;font-family:'DotGothic16',monospace;font-size:12px;padding:8px 20px;cursor:pointer;width:100%}
+
+/* 일일 이벤트 배너 */
+#daily-banner{background:rgba(124,111,255,.12);border:1px solid var(--accent);padding:8px 12px;font-size:11px;color:var(--text);margin-bottom:0;display:none;border-top:none}
+#daily-banner .db-label{color:var(--accent);font-size:9px;margin-bottom:2px;letter-spacing:.1em}
+</style>
+</head>
+<body>
+
+<div id="game">
+  <div id="statusbar">
+    <div class="sbar-left">
+      <span class="char-name" id="char-display">😾 이투잡</span>
+      <span class="level-badge" id="level-badge">Lv1</span>
+      <span style="font-size:9px;color:var(--muted)" id="day-display">Day 1</span>
+    </div>
+    <div class="sbar-right">
+      <div class="stat"><span>🐟</span><div class="stat-bar"><div class="stat-fill yellow" id="bar-tuna" style="width:60%"></div></div></div>
+      <div class="stat"><span>💜</span><div class="stat-bar"><div class="stat-fill" id="bar-spirit" style="width:80%"></div></div></div>
+      <div class="stat"><span>🎵</span><div class="stat-bar"><div class="stat-fill" id="bar-music" style="width:40%"></div></div></div>
+      <button id="bgm-btn" onclick="toggleBGM()">🎵</button>
+    </div>
+  </div>
+  <div id="daily-banner"><div class="db-label">▷ TODAY'S EVENT</div><div id="daily-text"></div></div>
+  <div id="scene">
+    <div id="time-badge">🌙 새벽</div>
+    <div id="event-text"></div>
+    <div id="character">🎧</div>
+    <div id="visualizer">
+      <div class="viz-bar" style="height:11px;animation-delay:0s"></div>
+      <div class="viz-bar" style="height:17px;animation-delay:.1s"></div>
+      <div class="viz-bar" style="height:7px;animation-delay:.2s"></div>
+      <div class="viz-bar" style="height:14px;animation-delay:.05s"></div>
+      <div class="viz-bar" style="height:19px;animation-delay:.15s"></div>
+      <div class="viz-bar" style="height:9px;animation-delay:.25s"></div>
+    </div>
+  </div>
+  <div id="dialogbox">
+    <div id="dialog-name">이투잡</div>
+    <div id="dialog-text">새벽 2시다. 오늘도 작업실이다.<span id="dialog-cursor"></span></div>
+  </div>
+  <div id="menuarea">
+    <div id="menu-title">▷ 어떻게 할까?</div>
+    <div id="menu-content"></div>
+  </div>
+</div>
+<div id="footer">made with 🎹 by <span>sookyeong</span> &nbsp;·&nbsp; 구르르엔터</div>
+
+<!-- 레벨업 팝업 -->
+<div id="levelup-popup">
+  <span class="lv-emoji" id="lv-emoji">⭐</span>
+  <div class="lv-title" id="lv-title">레벨 업!</div>
+  <div class="lv-sub" id="lv-sub">신인 뮤지션</div>
+  <button onclick="closeLevelup()">▶ 계속하기</button>
+</div>
+
+<script>
+// ══════════════════════════════
+// 💾 SAVE / LOAD
+// ══════════════════════════════
+const SAVE_KEY = 'toojab_save_v1';
+
+function saveGame() {
+  const data = {
+    tuna: state.tuna, spirit: state.spirit, music: state.music,
+    day: state.day, xp: state.xp, level: state.level,
+    discography: state.discography, time: state.time,
+    todayEventDone: state.todayEventDone,
+  };
+  localStorage.setItem(SAVE_KEY, JSON.stringify(data));
+}
+
+function loadGame() {
+  try {
+    const raw = localStorage.getItem(SAVE_KEY);
+    if (!raw) return false;
+    const d = JSON.parse(raw);
+    state.tuna    = d.tuna    ?? 60;
+    state.spirit  = d.spirit  ?? 80;
+    state.music   = d.music   ?? 40;
+    state.day     = d.day     ?? 1;
+    state.xp      = d.xp     ?? 0;
+    state.level   = d.level  ?? 1;
+    state.discography = d.discography ?? [];
+    state.time    = d.time   ?? 'night';
+    state.todayEventDone = d.todayEventDone ?? false;
+    return true;
+  } catch(e) { return false; }
+}
+
+// ══════════════════════════════
+// 🎮 STATE
+// ══════════════════════════════
+const state = {
+  tuna: 60, spirit: 80, music: 40,
+  day: 1, xp: 0, level: 1,
+  discography: [],   // [{title, genre, day, rare}]
+  time: 'night',     // 'morning' | 'afternoon' | 'night'
+  mood: null, genre: null,
+  todayEventDone: false,
+  dailyEvent: null,
+};
+
+// ── 레벨 정의 ──
+const LEVELS = [
+  { lv:1, name:'신인 뮤지션',         emoji:'😾', xp:0   },
+  { lv:2, name:'인디 씬 입문',         emoji:'😼', xp:30  },
+  { lv:3, name:'언더그라운드 존재감',  emoji:'😹', xp:80  },
+  { lv:4, name:'헤드폰 고양이',        emoji:'🎧', xp:160 },
+  { lv:5, name:'참치 걱정 없는 삶',   emoji:'✨', xp:300 },
+];
+
+function getLevelInfo() {
+  for (let i = LEVELS.length-1; i >= 0; i--) {
+    if (state.xp >= LEVELS[i].xp) return LEVELS[i];
+  }
+  return LEVELS[0];
+}
+
+function getNextLevel() {
+  const cur = getLevelInfo();
+  return LEVELS.find(l => l.lv === cur.lv + 1) || null;
+}
+
+function addXP(amount) {
+  const before = getLevelInfo();
+  state.xp += amount;
+  const after = getLevelInfo();
+  state.level = after.lv;
+  if (after.lv > before.lv) showLevelUp(after);
+  updateHUD();
+  saveGame();
+}
+
+function showLevelUp(lvInfo) {
+  if (audioCtx) sfxRare();
+  document.getElementById('lv-emoji').textContent = lvInfo.emoji;
+  document.getElementById('lv-title').textContent = `Lv${lvInfo.lv} 달성!`;
+  document.getElementById('lv-sub').textContent = lvInfo.name;
+  document.getElementById('levelup-popup').style.display = 'block';
+}
+
+function closeLevelup() {
+  document.getElementById('levelup-popup').style.display = 'none';
+}
+
+// ── 시간대 ──
+const TIME_INFO = {
+  morning:   { label:'🌅 아침', bg:'day'  },
+  afternoon: { label:'🌞 낮',   bg:'day'  },
+  night:     { label:'🌙 새벽', bg:''     },
+};
+
+function advanceTime() {
+  const order = ['morning','afternoon','night'];
+  const i = order.indexOf(state.time);
+  state.time = order[(i+1) % 3];
+  if (state.time === 'morning') {
+    state.day++;
+    state.todayEventDone = false;
+    rollDailyEvent();
+  }
+  saveGame();
+  updateHUD();
+}
+
+// ── 일일 이벤트 풀 ──
+const DAILY_EVENTS = [
+  { text:'오늘 Splice 세일! 샘플 사도 참치 안 까먹음 🎁', bonus: () => { state.tuna = Math.min(100, state.tuna+10); } },
+  { text:'팬이 커버곡 올렸다. 정신력 회복 💜', bonus: () => { state.spirit = Math.min(100, state.spirit+20); } },
+  { text:'알바 자리 바뀜. 참치 라인 담당이 됨 🐟', bonus: () => { state.tuna = Math.min(100, state.tuna+15); } },
+  { text:'플러그인 업데이트가 떴다. 오늘 작업이 잘 될 것 같다 🔌', bonus: () => { state.music = Math.min(100, state.music+15); } },
+  { text:'옆 동네 고양이가 인스타에 내 곡 태그했다 😹', bonus: () => { addXP(5); } },
+  { text:'오늘따라 커피가 맛있다. 이유는 모름 ☕', bonus: () => { state.spirit = Math.min(100, state.spirit+10); } },
+  { text:'박스에서 참치캔 하나 발견. 주운 거 아님 🐟', bonus: () => { state.tuna = Math.min(100, state.tuna+8); } },
+  { text:'DAW 업데이트 후 이상하게 더 잘 굴러간다 🎹', bonus: () => { state.music = Math.min(100, state.music+10); } },
+];
+
+function rollDailyEvent() {
+  state.dailyEvent = DAILY_EVENTS[Math.floor(Math.random() * DAILY_EVENTS.length)];
+}
+
+function showDailyBanner() {
+  if (!state.dailyEvent || state.todayEventDone) return;
+  document.getElementById('daily-text').textContent = state.dailyEvent.text;
+  document.getElementById('daily-banner').style.display = 'block';
+}
+
+function claimDailyEvent() {
+  if (!state.dailyEvent || state.todayEventDone) return;
+  state.dailyEvent.bonus();
+  state.todayEventDone = true;
+  document.getElementById('daily-banner').style.display = 'none';
+  updateBars();
+  saveGame();
+}
+
+// ── 표정 업데이트 ──
+function getFace() {
+  if (state.spirit < 25) return '😿';
+  if (state.spirit > 85 && state.tuna > 70) return '😸';
+  const lvInfo = getLevelInfo();
+  return lvInfo.emoji;
+}
+
+// ══════════════════════════════
+// 🖥 HUD 업데이트
+// ══════════════════════════════
+function updateHUD() {
+  const lvInfo = getLevelInfo();
+  const next   = getNextLevel();
+  const face   = getFace();
+  document.getElementById('char-display').textContent = `${face} 이투잡`;
+  document.getElementById('level-badge').textContent  = `Lv${lvInfo.lv} ${lvInfo.name}`;
+  document.getElementById('day-display').textContent  = `Day ${state.day}`;
+  document.getElementById('time-badge').textContent   = TIME_INFO[state.time].label;
+  updateBars();
+}
+
+function updateBars() {
+  document.getElementById('bar-tuna').style.width   = state.tuna   + '%';
+  document.getElementById('bar-spirit').style.width = state.spirit + '%';
+  document.getElementById('bar-music').style.width  = state.music  + '%';
+}
+
+// ══════════════════════════════
+// 🎭 SCENE ENGINE
+// ══════════════════════════════
+function setDialog(name, text) {
+  document.getElementById('dialog-name').textContent = name;
+  document.getElementById('dialog-text').innerHTML   = text + '<span id="dialog-cursor"></span>';
+}
+
+function showEvent(msg) {
+  const el = document.getElementById('event-text');
+  el.textContent = msg;
+  el.style.display = 'block';
+  el.classList.remove('show');
+  void el.offsetWidth;
+  el.classList.add('show');
+  setTimeout(() => { el.style.display='none'; }, 2500);
+  if (audioCtx && bgmPlaying) sfxEvent();
+}
+
+function spawnNote(e) {
+  const scene = document.getElementById('scene');
+  const n = document.createElement('div');
+  n.className = 'note'; n.textContent = e;
+  n.style.left = (Math.random()*60+80)+'px'; n.style.bottom = '65px';
+  scene.appendChild(n);
+  setTimeout(() => n.remove(), 2000);
+}
+
+function setWorking(on) {
+  const c = document.getElementById('character');
+  if (on) c.classList.add('working'); else c.classList.remove('working');
+}
+
+function setMonitor(text) {
+  const el = document.getElementById('monitor-text'); if (el) el.innerHTML = text;
+}
+
+function setCharPos(left, dx='-60px') {
+  const c = document.getElementById('character');
+  c.style.left = left;
+  c.style.transform = `translateX(-50%) translateX(${dx})`;
+}
+
+// ── 씬 배경 ──
+function setScene(type) {
+  const scene = document.getElementById('scene');
+  const isDay = state.time !== 'night';
+  [...scene.children].forEach(el => {
+    if (!['character','event-text','visualizer','time-badge'].includes(el.id)) el.remove();
+  });
+  const char = document.getElementById('character');
+  const viz  = document.getElementById('visualizer');
+
+  if (type === 'studio') {
+    scene.insertAdjacentHTML('afterbegin', `
+      <div class="studio-bg${isDay?' day':''}"></div>
+      <div class="stars" id="stars"></div>
+      ${isDay ? '<div class="sun"></div>' : '<div class="moon"></div>'}
+      <div class="desk"></div>
+      <div class="monitor">
+        <div class="monitor-screen"><div class="monitor-inner" id="monitor-text">PROJECT<br>UNTITLED<br>──────<br>저장안함⚠</div></div>
+        <div class="monitor-stand"></div><div class="monitor-base"></div>
+      </div>
+      <div class="keyboard"></div>
+    `);
+    char.style.display=''; setCharPos('50%','-60px'); char.textContent=getFace(); viz.style.display='';
+    const s=document.getElementById('stars');
+    for(let i=0;i<28;i++){const d=document.createElement('div');d.className='star';d.style.left=Math.random()*100+'%';d.style.top=Math.random()*55+'%';d.style.animationDelay=Math.random()*2+'s';s.appendChild(d);}
+
+  } else if (type === 'town') {
+    scene.insertAdjacentHTML('afterbegin', `
+      <div class="town-bg${isDay?' day':''}"></div>
+      ${isDay ? '<div class="sun"></div>' : '<div class="moon"></div>'}
+      <div class="town-ground${isDay?' day':''}"></div>
+      <div class="building" style="left:28px">
+        <div class="building-body lit" style="width:58px;height:76px">
+          <div class="bwin pon" style="top:11px;left:7px"></div><div class="bwin pon" style="top:11px;right:7px"></div>
+          <div class="bwin on"  style="top:32px;left:7px"></div><div class="bwin"    style="top:32px;right:7px"></div>
+          <div class="bwin"     style="top:53px;left:7px"></div><div class="bwin on" style="top:53px;right:7px"></div>
+        </div>
+        <div class="building-roof" style="border-left-width:29px;border-right-width:29px;border-bottom-width:16px"></div>
+      </div>
+      <div class="sign" style="left:20px;bottom:108px;color:var(--accent)">🎹작업실</div>
+      <div class="building" style="left:136px">
+        <div class="building-body" style="width:76px;height:58px">
+          <div class="bwin on"  style="top:9px;left:9px;width:11px;height:11px"></div>
+          <div class="bwin"     style="top:9px;right:9px;width:11px;height:11px"></div>
+          <div class="bwin"     style="top:33px;left:9px;width:11px;height:7px"></div>
+          <div class="bwin on"  style="top:33px;right:9px;width:11px;height:7px"></div>
+        </div>
+      </div>
+      <div class="sign" style="left:134px;bottom:90px">📦물류센터</div>
+      <div class="building" style="right:126px">
+        <div class="building-body lit" style="width:52px;height:52px">
+          <div class="bwin on" style="top:9px;left:5px;width:9px;height:9px"></div>
+          <div class="bwin on" style="top:9px;right:5px;width:9px;height:9px"></div>
+          <div class="bwin on" style="top:30px;left:5px;width:36px;height:9px"></div>
+        </div>
+      </div>
+      <div class="sign" style="right:118px;bottom:84px">🏪편의점</div>
+      <div class="building" style="right:18px">
+        <div class="building-body" style="width:48px;height:43px">
+          <div class="bwin"    style="top:7px;left:5px;width:7px;height:7px"></div>
+          <div class="bwin on" style="top:7px;right:5px;width:7px;height:7px"></div>
+          <div class="bwin on" style="top:24px;left:5px;width:7px;height:7px"></div>
+          <div class="bwin"    style="top:24px;right:5px;width:7px;height:7px"></div>
+        </div>
+        <div class="building-roof" style="border-left-width:24px;border-right-width:24px;border-bottom-width:13px"></div>
+      </div>
+      <div class="sign" style="right:10px;bottom:73px">☕광장</div>
+    `);
+    char.style.display=''; setCharPos('50%','0px'); char.textContent=getFace(); viz.style.display='none';
+
+  } else if (type === 'alba') {
+    scene.insertAdjacentHTML('afterbegin', `
+      <div class="alba-bg"></div>
+      <div class="w-shelf" style="top:55px"></div><div class="w-shelf" style="top:96px"></div><div class="w-shelf" style="top:137px"></div>
+      <div style="position:absolute;top:43px;left:18px;font-size:12px;color:var(--muted)">📦 📦 🐟 📦 🥫</div>
+      <div style="position:absolute;top:84px;left:18px;font-size:12px;color:var(--muted)">🐟 📦 📦 🐟 📦</div>
+      <div style="position:absolute;top:125px;left:18px;font-size:12px;color:var(--muted)">📦 🐟 📦 📦 🥫</div>
+      <div class="conveyor"></div>
+      <div style="position:absolute;bottom:46px;left:8px;font-size:16px;animation:convMove 1s linear infinite">📦 🐟 📦 🐟 📦</div>
+    `);
+    char.style.display=''; setCharPos('60%','0px'); char.textContent='😾'; viz.style.display='none';
+
+  } else if (type === 'store') {
+    scene.insertAdjacentHTML('afterbegin', `
+      <div class="store-bg"></div>
+      <div class="store-shelf" style="top:48px"></div><div class="store-shelf" style="top:96px"></div><div class="store-shelf" style="top:144px"></div>
+      <div style="position:absolute;top:28px;left:28px;font-size:16px">🐟 🐟 🐟 🥫 🥫</div>
+      <div style="position:absolute;top:76px;left:28px;font-size:16px">🧃 ☕ 🥛 🧃 ☕</div>
+      <div style="position:absolute;top:124px;left:28px;font-size:16px">🍜 🍜 🍜 🥡 🍜</div>
+      <div style="position:absolute;top:6px;left:50%;transform:translateX(-50%);font-size:9px;color:var(--yellow);letter-spacing:2px">OPEN 24H</div>
+    `);
+    char.style.display=''; setCharPos('38%','0px'); char.textContent=getFace(); viz.style.display='none';
+
+  } else if (type === 'plaza') {
+    scene.insertAdjacentHTML('afterbegin', `
+      <div class="plaza-bg"></div>
+      <div class="stars" id="stars2"></div>
+      <div class="town-ground" style="background:#1a1a35;border-color:#2a2a55"></div>
+      <div class="fountain">⛲</div>
+      <div class="npc" style="left:55px">😼</div>
+      <div class="npc" style="left:155px;animation-delay:.5s">😺</div>
+      <div class="npc" style="right:55px;animation-delay:.9s">😹</div>
+    `);
+    char.style.display=''; setCharPos('50%','0px'); char.textContent=getFace(); viz.style.display='none';
+    const s2=document.getElementById('stars2');
+    for(let i=0;i<18;i++){const d=document.createElement('div');d.className='star';d.style.left=Math.random()*100+'%';d.style.top=Math.random()*50+'%';d.style.animationDelay=Math.random()*2+'s';s2.appendChild(d);}
+  }
+}
+
+// ══════════════════════════════
+// 📋 MENU RENDER
+// ══════════════════════════════
+function renderMenu(items) {
+  const el = document.getElementById('menu-content');
+  el.innerHTML = '';
+  if (items.type === 'grid') {
+    const g = document.createElement('div'); g.className = 'menu-grid';
+    items.options.forEach(o => {
+      const b = document.createElement('button'); b.className='menu-btn';
+      b.textContent=o.label; b.onclick=o.action; g.appendChild(b);
+    });
+    el.appendChild(g);
+  } else if (items.type === 'choice') {
+    const l = document.createElement('div'); l.className='choice-list';
+    items.options.forEach(o => {
+      const b = document.createElement('button'); b.className='choice-btn';
+      b.textContent=o.label; b.onclick=o.action; l.appendChild(b);
+    });
+    el.appendChild(l);
+  } else if (items.type === 'result') {
+    const c = document.createElement('div'); c.className='result-card';
+    c.innerHTML = items.html; el.appendChild(c);
+  } else if (items.type === 'progress') {
+    const w = document.createElement('div');
+    w.innerHTML=`<div style="font-size:12px;margin-bottom:7px;color:var(--text)">${items.label}</div>
+    <div class="progress-wrap"><span>${items.sublabel}</span>
+    <div class="progress-bar"><div class="progress-fill" id="prog-fill"></div></div>
+    <span id="prog-pct">0%</span></div>`;
+    el.appendChild(w);
+    let pct=0;
+    const fill=w.querySelector('#prog-fill'), pctEl=w.querySelector('#prog-pct');
+    const iv=setInterval(()=>{
+      pct+=2; fill.style.width=pct+'%'; pctEl.textContent=pct+'%';
+      if(pct>=100){clearInterval(iv);setTimeout(items.done,300);}
+    }, items.speed||40);
+  } else if (items.type === 'disco') {
+    const list = document.createElement('div'); list.className='disco-list';
+    if (state.discography.length === 0) {
+      list.innerHTML = '<div style="color:var(--muted);font-size:11px;padding:8px">아직 발매한 곡이 없다.</div>';
+    } else {
+      [...state.discography].reverse().forEach(t => {
+        const d = document.createElement('div'); d.className='disco-item';
+        d.innerHTML = `<span class="d-title${t.rare?' d-rare':''}">${t.rare?'✦ ':''}${t.title}</span>
+        <span class="d-meta">${t.genre}<br>Day ${t.day}</span>`;
+        list.appendChild(d);
+      });
+    }
+    el.appendChild(list);
+    const back = document.createElement('button');
+    back.className='choice-btn'; back.style.marginTop='8px';
+    back.textContent='← 돌아가기'; back.onclick=sceneMain;
+    el.appendChild(back);
+  } else if (items.type === 'hall') {
+    const lvInfo = getLevelInfo();
+    const next   = getNextLevel();
+    const c = document.createElement('div'); c.className='hall-card';
+    const xpToNext = next ? (next.xp - state.xp) : 0;
+    c.innerHTML = `
+      <span class="hall-emoji">${lvInfo.emoji}</span>
+      <div class="hall-title">이투잡 — ${lvInfo.name}</div>
+      <div class="hall-stats" style="margin:10px 0">
+        <div class="hall-stat-row"><span>📅 플레이 일수</span><span>Day ${state.day}</span></div>
+        <div class="hall-stat-row"><span>🎵 발매곡</span><span>${state.discography.length}곡</span></div>
+        <div class="hall-stat-row"><span>⭐ 경험치</span><span>${state.xp} XP</span></div>
+        <div class="hall-stat-row"><span>🐟 현재 참치</span><span>${state.tuna}%</span></div>
+        ${next ? `<div class="hall-stat-row"><span>다음 레벨까지</span><span>${xpToNext} XP</span></div>` : '<div class="hall-stat-row"><span>🏆 최고 등급 달성!</span><span>✨</span></div>'}
+      </div>
+    `;
+    el.appendChild(c);
+    const back = document.createElement('button');
+    back.className='choice-btn'; back.style.marginTop='8px';
+    back.textContent='← 돌아가기'; back.onclick=sceneMain;
+    el.appendChild(back);
+  }
+}
+
+// ══════════════════════════════
+// 🎬 SCENES
+// ══════════════════════════════
+function sceneMain() {
+  setScene('studio');
+  updateHUD();
+  showDailyBanner();
+  const timeDialogs = {
+    morning:   '아침이다. 커피부터.',
+    afternoon: '낮이다. 알바 끝나고 작업실.',
+    night:     '새벽 2시. DAW는 켜져 있고 커피는 식었다.',
+  };
+  setDialog('이투잡', timeDialogs[state.time] + '\n오늘 뭐 할까?');
+  setWorking(false);
+  renderMenu({
+    type: 'grid',
+    options: [
+      { label: '🎹 곡 작업하기',      action: sceneStartTrack },
+      { label: '💾 저장 / 다음날',     action: sceneSaveNext  },
+      { label: '🏘️ 마을 나가기',      action: sceneTown      },
+      { label: '📀 디스코그래피',      action: sceneDiscography },
+      { label: '🏆 명예의 전당',       action: sceneHall      },
+      { label: '⏰ 시간 보내기',       action: () => { advanceTime(); sceneMain(); } },
+    ]
+  });
+  if (state.dailyEvent && !state.todayEventDone) {
+    // 배너 클릭하면 보너스 받기
+    document.getElementById('daily-banner').onclick = () => {
+      claimDailyEvent(); showEvent('✦ 오늘의 이벤트 획득!'); sceneMain();
+    };
+  }
+}
+
+function sceneDiscography() {
+  setDialog('이투잡', `지금까지 만든 곡들.\n총 ${state.discography.length}곡.`);
+  renderMenu({ type: 'disco' });
+}
+
+function sceneHall() {
+  const lvInfo = getLevelInfo();
+  setDialog('이투잡', `${lvInfo.emoji} ${lvInfo.name}.\n오늘도 계속한다.`);
+  renderMenu({ type: 'hall' });
+}
+
+function sceneSaveNext() {
+  saveGame();
+  showEvent('💾 저장 완료');
+  setDialog('이투잡', '저장했다.\n내일도 계속한다.');
+  setMonitor('SAVED<br>✓ OK<br>────<br>v'+state.day+'.0');
+  advanceTime();
+  setTimeout(sceneMain, 1800);
+}
+
+// ── 마을 ──
+function sceneTown() {
+  setScene('town');
+  const greet = state.time === 'night' ? '새벽이라 조용하다.' : '낮이라 활기차다.';
+  setDialog('이투잡', `마을에 나왔다.\n${greet}`);
+  renderMenu({
+    type: 'grid',
+    options: [
+      { label: '📦 물류센터 (알바)',    action: sceneAlbaFull },
+      { label: '🏪 편의점 (참치 구매)', action: sceneStore    },
+      { label: '☕ 고양이 광장 (수다)', action: scenePlaza    },
+      { label: '🎹 작업실로',           action: sceneMain     },
+    ]
+  });
+}
+
+// ── 알바 ──
+function sceneAlbaFull() {
+  setScene('alba');
+  setDialog('이투잡', `물류센터.\n오늘도 분류 시작이다.`);
+  renderMenu({
+    type: 'choice',
+    options: [
+      { label: '📦 박스 분류 시작',       action: sceneAlbaWork },
+      { label: '🐟 참치 라인 확인',        action: () => { setDialog('이투잡','참치 박스가 제일 많다.\n직업병인지 자꾸 세게 된다.');setTimeout(sceneAlbaWork,1800);} },
+      { label: '🙃 잠깐 멍 때리기',        action: () => { state.spirit=Math.min(100,state.spirit+5);updateBars();showEvent('💜 +5');setDialog('이투잡','컨베이어 소리가\n음악처럼 들린다.');setTimeout(sceneAlbaWork,2000);} },
+    ]
+  });
+}
+
+function sceneAlbaWork() {
+  setDialog('이투잡','박스 분류 중…');
+  renderMenu({
+    type:'progress', label:'📦 상자 분류 중…', sublabel:'진행도', speed:25,
+    done:() => {
+      state.tuna=Math.min(100,state.tuna+25); addXP(3); updateBars();
+      showEvent('🐟 참치 +25 / ⭐ XP +3');
+      setDialog('이투잡','퇴근.\n손목은 아프지만 참치는 늘었다.');
+      renderMenu({ type:'choice', options:[
+        { label:'🏪 편의점 들렀다 가기', action:sceneStore },
+        { label:'🎹 바로 작업실로',      action:sceneMain  },
+        { label:'🏘️ 마을 구경하기',     action:sceneTown  },
+      ]});
+    }
+  });
+}
+
+// ── 편의점 ──
+function sceneStore() {
+  setScene('store');
+  setDialog('이투잡',`편의점.\n참치 캔이 쭉 늘어서 있다.`);
+  renderMenu({ type:'choice', options:[
+    { label:`🐟 참치캔 구매 (🐟-20)`, action:() => {
+      if(state.tuna<20){setDialog('이투잡','참치가 부족하다.\n일단 알바부터.');return;}
+      state.tuna-=20; state.spirit=Math.min(100,state.spirit+25);
+      updateBars(); showEvent('😸 참치 먹음! 💜 +25');
+      setDialog('이투잡','참치 맛있다.\n이맛에 알바하지.');
+      setTimeout(sceneTown,2000);
+    }},
+    { label:'☕ 커피 (정신력 +10)', action:() => {
+      state.spirit=Math.min(100,state.spirit+10); updateBars();
+      showEvent('☕ 커피 원샷. 💜 +10');
+      setDialog('이투잡','믹스커피 390원.\n이게 또 맛있다.');
+      setTimeout(sceneTown,1800);
+    }},
+    { label:'🔙 그냥 나가기', action:sceneTown },
+  ]});
+}
+
+// ── 광장 ──
+function scenePlaza() {
+  setScene('plaza');
+  setDialog('이투잡',`광장.\n동료 고양이들이 모여 있다.`);
+  renderMenu({ type:'choice', options:[
+    { label:'😼 홈마 고양이', action:sceneHomma    },
+    { label:'😺 디자이너',   action:sceneDesigner },
+    { label:'😹 개발자',     action:sceneDev      },
+    { label:'🔙 마을로',     action:sceneTown     },
+  ]});
+}
+
+function sceneNPC() { scenePlaza(); }
+
+function sceneHomma() {
+  setDialog('😼 홈마 고양이','렌더링 7시간째야.\n진행률 34%.');
+  setTimeout(()=>{
+    setDialog('😼 홈마 고양이','이게 맞냐고.');
+    renderMenu({ type:'choice', options:[
+      { label:'🙏 "고생한다…"',            action:()=>{ setDialog('이투잡','위로의 말 밖에 없다.'); setTimeout(scenePlaza,1500);} },
+      { label:'💡 프록시 파일 추천',        action:()=>{ setDialog('😼 홈마','아 그거 몰랐어. 해볼게'); state.spirit=Math.min(100,state.spirit+5); addXP(2); updateBars(); setTimeout(scenePlaza,1800);} },
+    ]});
+  },1500);
+}
+
+function sceneDesigner() {
+  setDialog('😺 디자이너 고양이','폰트 찾으러 들어갔다가\n3시간 지났어.');
+  setTimeout(()=>{
+    renderMenu({ type:'choice', options:[
+      { label:'🔤 내가 쓰는 거 공유',  action:()=>{ setDialog('이투잡','Pretendard 링크 보냈다.'); state.music=Math.min(100,state.music+5); addXP(2); updateBars(); setTimeout(scenePlaza,1800);} },
+      { label:'😅 "그거 원래 그래"',   action:()=>{ setDialog('😺 디자이너','…그렇구나'); setTimeout(scenePlaza,1500);} },
+    ]});
+  },1500);
+}
+
+function sceneDev() {
+  setDialog('😹 개발자 고양이','내 컴퓨터에서는 되는데?');
+  setTimeout(()=>{
+    setDialog('이투잡','….');
+    setTimeout(()=>{ setDialog('이투잡','이 말 들을 때마다\n뭔가 허탈하다.'); setTimeout(scenePlaza,2000); },1200);
+  },1200);
+}
+
+// ── 음악 작업 ──
+function sceneStartTrack() {
+  setScene('studio');
+  setDialog('이투잡',`오늘 곡 어떤 방향으로 갈까.\n멜로디부터 잡아보자.`);
+  renderMenu({ type:'choice', options:[
+    { label:'🎹 감성 발라드  — 새벽 감성',    action:()=>chooseMood('ballad') },
+    { label:'🎸 락  — 오늘따라 폭발하고 싶다', action:()=>chooseMood('rock')   },
+    { label:'🦖 공룡메탈  — 이유 없음',        action:()=>chooseMood('dino')   },
+    { label:'🌊 시티팝  — 참치 드라이브',      action:()=>chooseMood('city')   },
+  ]});
+}
+
+function chooseMood(genre) {
+  const labels = {
+    ballad:['감성 발라드','🎹','새벽 감성 넘침'],
+    rock:  ['락','🎸','어딘가 폭발적'],
+    dino:  ['공룡메탈','🦖','왜인지 모르겠지만 확신이 생김'],
+    city:  ['시티팝','🌊','참치향이 나는 것 같기도'],
+  };
+  const [name,emoji,desc]=labels[genre];
+  state.mood=name; state.genre=genre;
+  setDialog('이투잡',`${emoji} ${name}… ${desc}.\n다음은 샘플 고르기.`);
+  renderMenu({ type:'choice', options:[
+    { label:'🥁 드럼 — 808',       action:()=>chooseSample('808')    },
+    { label:'🎷 브라스 — Splice산', action:()=>chooseSample('brass')  },
+    { label:'🎻 스트링 — 직접 연주', action:()=>chooseSample('string') },
+  ]});
+}
+
+function chooseSample(sample) {
+  const evs=[null,null,null,'noise','missing','unsaved'];
+  const ev=evs[Math.floor(Math.random()*evs.length)];
+  if(ev==='noise') sceneNoise(sample);
+  else if(ev==='missing') sceneMissingSample(sample);
+  else if(ev==='unsaved') sceneUnsaved(sample);
+  else sceneCompose(sample);
+}
+
+function sceneNoise(sample) {
+  showEvent('⚠ 원인 모를 노이즈 발생!');
+  setWorking(false);
+  setDialog('이투잡',`갑자기 "끼이이익—"\n노이즈가 터졌다. 어디서 나는 거지?`);
+  setMonitor('ERROR<br>NOISE<br>??????<br>???');
+  renderMenu({ type:'choice', options:[
+    { label:'🔌 케이블 다 뽑았다 다시 꽂기', action:()=>{ showEvent('✓ 해결됨! (이유는 모름)'); sceneCompose(sample);} },
+    { label:'🔄 DAW 재시작',                  action:()=>{ showEvent('✓ 재시작 후 사라짐'); sceneCompose(sample);} },
+    { label:'🙃 그냥 무시하고 작업',           action:()=>{ state.spirit-=10; updateBars(); showEvent('정신력 -10'); sceneCompose(sample);} },
+  ]});
+}
+
+function sceneMissingSample(sample) {
+  showEvent('📁 샘플 폴더가 없어졌다?!');
+  setDialog('이투잡',`분명히 Splice에서 받았는데.\n폴더가 통째로 없다.`);
+  renderMenu({ type:'choice', options:[
+    { label:'🔍 30분 뒤 Downloads에서 발견', action:()=>{ showEvent('Downloads에 있었음 ㅋㅋ'); state.spirit-=5; updateBars(); sceneCompose(sample);} },
+    { label:'🌐 Splice 재다운로드',           action:()=>{ showEvent('재다운로드 완료. 참치 -10'); state.tuna-=10; updateBars(); sceneCompose(sample);} },
+  ]});
+}
+
+function sceneUnsaved(sample) {
+  showEvent('⚠ 저장 안 함 경고!!!');
+  setDialog('이투잡',`잠깐. 마지막으로 저장한 게 언제지.\n……. 식은땀이 난다.`);
+  setMonitor('⚠ UNSAVED<br>2h 34m<br>────<br>저장하세요');
+  renderMenu({ type:'choice', options:[
+    { label:'💾 지금 당장 Cmd+S 연타',       action:()=>{ showEvent('💾 저장 완료. 안도감 MAX'); state.spirit+=10; updateBars(); sceneCompose(sample);} },
+    { label:'🙃 괜찮겠지 (그냥 계속 작업)',  action:()=>{ showEvent('...(불안함이 남아있다)'); sceneCompose(sample);} },
+  ]});
+}
+
+function sceneCompose(sample) {
+  setWorking(true);
+  setMonitor('WORKING<br>████░░░░<br>────<br>…');
+  setDialog('이투잡',`좋아. 작업 시작한다.`);
+  const notes=['🎵','🎶','♪','♫','🎼'];
+  let nt=setInterval(()=>{ spawnNote(notes[Math.floor(Math.random()*notes.length)]); },400);
+  renderMenu({
+    type:'progress', label:`🎹 ${state.mood||'곡'} 작업 중…`, sublabel:'렌더링', speed:30,
+    done:()=>{
+      clearInterval(nt); setWorking(false);
+      state.music=Math.min(100,state.music+20);
+      state.spirit=Math.max(10,state.spirit-5);
+      updateBars();
+      setMonitor('DONE<br>✓ 저장됨<br>────<br>v'+state.day+'.'+state.discography.length);
+      sceneRelease();
+    }
+  });
+}
+
+function sceneRelease() {
+  setDialog('이투잡',`됐다. 오늘치 데모 완성.\n올려볼까?`);
+  renderMenu({ type:'choice', options:[
+    { label:'📤 지금 바로 공개',    action:sceneFanReaction },
+    { label:'🌙 내일 올리자',        action:()=>{ setDialog('이투잡','내일이 되면 또 고치고 싶을 게 분명하지만.\n일단 자자.'); setTimeout(sceneMain,2000);} },
+  ]});
+}
+
+function sceneFanReaction() {
+  const rare = Math.random() < 0.15;
+  const common = [['😺','좋네요.'],['😺','잘 들었습니다.'],['😺','수고하셨어요.'],['😺','오 신보네요'],['😺','감사합니다']];
+  const pick = common[Math.floor(Math.random()*common.length)];
+
+  // 디스코그래피에 기록
+  const trackTitle = `${state.mood||'새 트랙'} #${state.discography.length+1}`;
+  state.discography.push({ title:trackTitle, genre:state.genre||'?', day:state.day, rare });
+  addXP(rare ? 15 : 5);
+  saveGame();
+
+  showEvent('📤 곡 공개됨!');
+  setDialog('이투잡','올렸다. 반응 좀 볼까.');
+
+  let html = `<div class="result-title">📀 ${trackTitle} — 팬 반응</div>`;
+
+  if (rare) {
+    state.spirit=Math.min(100,state.spirit+30); updateBars();
+    html+=`<div class="fan-msg fan-rare">💌 "이 노래 덕분에 오늘 하루 버텼어요."</div>
+    <div class="fan-msg fan-rare">💌 "계속 만들어주세요."</div>
+    <div class="result-fans">정신력 +30 ✦ XP +15 ✦ 오늘 살았다</div>`;
+    setDialog('이투잡','…이런 댓글 하나면\n다음 곡 만들게 된다.');
+    spawnNote('💌'); spawnNote('💜'); spawnNote('✨');
+    if(audioCtx) sfxRare();
+  } else {
+    html+=`<div class="fan-msg">${pick[0]} "${pick[1]}"</div>
+    <div class="fan-msg">😺 "잘 듣겠습니다"</div>
+    <div class="fan-msg">😺 "오 올라왔네요"</div>
+    <div class="result-fans">그래도 들어줬다. 그걸로 됐어. XP +5</div>`;
+    setDialog('이투잡','"좋네요" 세 개.\n…그래. 이게 현실이지.');
+  }
+  html+=`<div style="margin-top:9px;padding-top:9px;border-top:1px solid var(--border)">
+  <button onclick="sceneMain()" style="background:var(--accent);border:none;color:white;font-family:'DotGothic16',monospace;font-size:11px;padding:7px 14px;cursor:pointer;width:100%">▶ 다음날로</button></div>`;
+  renderMenu({ type:'result', html });
+}
+
+function sceneAlba() { sceneAlbaFull(); }
+function sceneSave() { sceneSaveNext(); }
+
+// ══════════════════════════════
+// 🎵 AUDIO ENGINE
+// ══════════════════════════════
+let audioCtx=null, bgmPlaying=false, bgmNodes={}, masterGain=null;
+
+function initAudio() {
+  if(audioCtx) return;
+  audioCtx=new(window.AudioContext||window.webkitAudioContext)();
+  masterGain=audioCtx.createGain(); masterGain.gain.value=0.45;
+  masterGain.connect(audioCtx.destination);
+}
+
+function sfxPop() {
+  if(!audioCtx) return;
+  const osc=audioCtx.createOscillator(), g=audioCtx.createGain();
+  osc.connect(g); g.connect(masterGain); osc.type='sine';
+  const t=audioCtx.currentTime;
+  osc.frequency.setValueAtTime(520,t); osc.frequency.exponentialRampToValueAtTime(280,t+.07);
+  g.gain.setValueAtTime(.16,t); g.gain.exponentialRampToValueAtTime(.001,t+.1);
+  osc.start(t); osc.stop(t+.1);
+}
+
+function sfxEvent() {
+  if(!audioCtx) return;
+  const t=audioCtx.currentTime;
+  [660,880].forEach((f,i)=>{
+    const osc=audioCtx.createOscillator(),g=audioCtx.createGain();
+    osc.connect(g);g.connect(masterGain);osc.type='square';osc.frequency.value=f;
+    g.gain.setValueAtTime(0,t+i*.1);g.gain.linearRampToValueAtTime(.07,t+i*.1+.01);
+    g.gain.exponentialRampToValueAtTime(.001,t+i*.1+.18);
+    osc.start(t+i*.1);osc.stop(t+i*.1+.2);
+  });
+}
+
+function sfxRare() {
+  if(!audioCtx) return;
+  const t=audioCtx.currentTime;
+  [523,659,784,1047].forEach((f,i)=>{
+    const osc=audioCtx.createOscillator(),g=audioCtx.createGain();
+    osc.connect(g);g.connect(masterGain);osc.type='triangle';osc.frequency.value=f;
+    g.gain.setValueAtTime(0,t+i*.12);g.gain.linearRampToValueAtTime(.11,t+i*.12+.02);
+    g.gain.exponentialRampToValueAtTime(.001,t+i*.12+.35);
+    osc.start(t+i*.12);osc.stop(t+i*.12+.4);
+  });
+}
+
+function sfxLevelUp() {
+  if(!audioCtx) return;
+  const t=audioCtx.currentTime;
+  [392,523,659,784,1047].forEach((f,i)=>{
+    const osc=audioCtx.createOscillator(),g=audioCtx.createGain();
+    osc.connect(g);g.connect(masterGain);osc.type='square';osc.frequency.value=f;
+    g.gain.setValueAtTime(0,t+i*.1);g.gain.linearRampToValueAtTime(.09,t+i*.1+.02);
+    g.gain.exponentialRampToValueAtTime(.001,t+i*.1+.4);
+    osc.start(t+i*.1);osc.stop(t+i*.1+.45);
+  });
+}
+
+function startBGM() {
+  if(!audioCtx||bgmPlaying) return;
+  bgmPlaying=true;
+  const BPM=80, beat=60/BPM, bar=beat*4;
+
+  // vinyl crackle
+  const bLen=audioCtx.sampleRate*2;
+  const nBuf=audioCtx.createBuffer(1,bLen,audioCtx.sampleRate);
+  const nd=nBuf.getChannelData(0);
+  for(let i=0;i<bLen;i++) nd[i]=(Math.random()*2-1)*.011;
+  const nSrc=audioCtx.createBufferSource(); nSrc.buffer=nBuf; nSrc.loop=true;
+  const nFilt=audioCtx.createBiquadFilter(); nFilt.type='lowpass'; nFilt.frequency.value=800;
+  const nGain=audioCtx.createGain(); nGain.gain.value=.055;
+  nSrc.connect(nFilt);nFilt.connect(nGain);nGain.connect(masterGain); nSrc.start();
+  bgmNodes.noise=nSrc;
+
+  function kick(t){
+    const o=audioCtx.createOscillator(),g=audioCtx.createGain();
+    o.connect(g);g.connect(masterGain);
+    o.frequency.setValueAtTime(150,t);o.frequency.exponentialRampToValueAtTime(40,t+.2);
+    g.gain.setValueAtTime(.28,t);g.gain.exponentialRampToValueAtTime(.001,t+.25);
+    o.start(t);o.stop(t+.3);
+  }
+  function snare(t){
+    const buf=audioCtx.createBuffer(1,audioCtx.sampleRate*.12,audioCtx.sampleRate);
+    const d=buf.getChannelData(0); for(let i=0;i<d.length;i++) d[i]=Math.random()*2-1;
+    const s=audioCtx.createBufferSource(); s.buffer=buf;
+    const f=audioCtx.createBiquadFilter(); f.type='highpass'; f.frequency.value=1800;
+    const g=audioCtx.createGain(); s.connect(f);f.connect(g);g.connect(masterGain);
+    g.gain.setValueAtTime(.11,t);g.gain.exponentialRampToValueAtTime(.001,t+.12);
+    s.start(t);s.stop(t+.13);
+  }
+  function hihat(t,open){
+    const buf=audioCtx.createBuffer(1,audioCtx.sampleRate*.05,audioCtx.sampleRate);
+    const d=buf.getChannelData(0); for(let i=0;i<d.length;i++) d[i]=Math.random()*2-1;
+    const s=audioCtx.createBufferSource(); s.buffer=buf;
+    const f=audioCtx.createBiquadFilter(); f.type='highpass'; f.frequency.value=7000;
+    const g=audioCtx.createGain(); s.connect(f);f.connect(g);g.connect(masterGain);
+    g.gain.setValueAtTime(open?.065:.038,t);g.gain.exponentialRampToValueAtTime(.001,t+(open?.08:.03));
+    s.start(t);s.stop(t+.1);
+  }
+  const chords=[[220,261.6,329.6],[174.6,220,261.6],[261.6,329.6,392],[196,246.9,293.7]];
+  function chord(freqs,t,dur){
+    freqs.forEach(f=>{
+      const o=audioCtx.createOscillator(),g=audioCtx.createGain(),lpf=audioCtx.createBiquadFilter();
+      o.type='sawtooth'; o.frequency.value=f; lpf.type='lowpass'; lpf.frequency.value=900;
+      o.connect(lpf);lpf.connect(g);g.connect(masterGain);
+      g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(.038,t+.08);
+      g.gain.setValueAtTime(.038,t+dur-.1);g.gain.linearRampToValueAtTime(0,t+dur);
+      o.start(t);o.stop(t+dur+.05);
+    });
+  }
+  const bassN=[110,87.3,130.8,98];
+  function bass(f,t,dur){
+    const o=audioCtx.createOscillator(),g=audioCtx.createGain(),lpf=audioCtx.createBiquadFilter();
+    o.type='sine'; o.frequency.value=f; lpf.type='lowpass'; lpf.frequency.value=300;
+    o.connect(lpf);lpf.connect(g);g.connect(masterGain);
+    g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(.17,t+.04);
+    g.gain.setValueAtTime(.17,t+dur-.05);g.gain.linearRampToValueAtTime(0,t+dur);
+    o.start(t);o.stop(t+dur+.05);
+  }
+  const melN=[440,392,349.2,329.6,293.7,261.6,220];
+  function mel(t){
+    const cnt=2+Math.floor(Math.random()*3);
+    for(let i=0;i<cnt;i++){
+      const f=melN[Math.floor(Math.random()*melN.length)];
+      const off=i*beat*.5*(.8+Math.random()*.4), dur=beat*.3;
+      const o=audioCtx.createOscillator(),g=audioCtx.createGain();
+      o.type='triangle'; o.frequency.value=f; o.connect(g);g.connect(masterGain);
+      const tt=t+off;
+      g.gain.setValueAtTime(0,tt);g.gain.linearRampToValueAtTime(.065,tt+.02);
+      g.gain.exponentialRampToValueAtTime(.001,tt+dur);
+      o.start(tt);o.stop(tt+dur+.05);
+    }
+  }
+
+  let lc=0, lt=null;
+  function schedBar(){
+    if(!bgmPlaying) return;
+    const now=audioCtx.currentTime, ci=lc%4;
+    chord(chords[ci],now,bar);
+    bass(bassN[ci],now,beat*2); bass(bassN[ci]*1.5,now+beat*2,beat*1.5);
+    kick(now); kick(now+beat*2);
+    snare(now+beat); snare(now+beat*3);
+    for(let i=0;i<8;i++) hihat(now+i*beat*.5,i%4===2);
+    if(lc%2===0) mel(now+beat*.5);
+    lc++; lt=setTimeout(schedBar,bar*1000-30);
+  }
+  schedBar();
+  bgmNodes.stopLoop=()=>{ bgmPlaying=false; clearTimeout(lt); };
+}
+
+function stopBGM(){
+  bgmPlaying=false;
+  if(bgmNodes.noise){try{bgmNodes.noise.stop();}catch(e){}}
+  if(bgmNodes.stopLoop) bgmNodes.stopLoop();
+  bgmNodes={};
+}
+
+function toggleBGM(){
+  initAudio();
+  const btn=document.getElementById('bgm-btn');
+  if(bgmPlaying){
+    stopBGM(); btn.textContent='🔇'; btn.style.color='var(--muted)'; btn.style.borderColor='var(--border)';
+  } else {
+    startBGM(); btn.textContent='🎵'; btn.style.color='var(--green)'; btn.style.borderColor='var(--green)';
+  }
+}
+
+// 첫 클릭 시 BGM 자동 시작
+let bgmAutoStarted=false;
+document.getElementById('menu-content').addEventListener('click',e=>{
+  if(e.target.tagName==='BUTTON'){
+    initAudio(); sfxPop();
+    if(!bgmAutoStarted){
+      bgmAutoStarted=true; startBGM();
+      const btn=document.getElementById('bgm-btn');
+      btn.textContent='🎵'; btn.style.color='var(--green)'; btn.style.borderColor='var(--green)';
+    }
+  }
+});
+
+// showEvent에 sfxEvent 연결
+const _origSE=showEvent;
+showEvent=function(msg){
+  const el=document.getElementById('event-text');
+  el.textContent=msg; el.style.display='block';
+  el.classList.remove('show'); void el.offsetWidth; el.classList.add('show');
+  setTimeout(()=>{el.style.display='none';},2500);
+  if(audioCtx&&bgmPlaying) sfxEvent();
+};
+
+// ══════════════════════════════
+// 🚀 INIT
+// ══════════════════════════════
+const resumed = loadGame();
+if (!state.dailyEvent) rollDailyEvent();
+updateHUD();
+sceneMain();
+
+if (resumed) {
+  setTimeout(() => showEvent(`💾 Day ${state.day} 불러오기 완료!`), 800);
+}
+</script>
+</body>
+</html>
